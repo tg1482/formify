@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Formify",
+  "version": "1.0",
+  "description": "Copilot for filling forms",
+  "permissions": ["storage", "activeTab"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "48": "icons/icon.png"
+  },
+  "action": {
+    "default_icon": "icons/icon.png",
+    "default_popup": "formify/public/index.html",
+    "default_title": "Form Data"
+  }
+}
