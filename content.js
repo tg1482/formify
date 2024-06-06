@@ -33,5 +33,5 @@ if (document.readyState === "loading") {
 }
 
 function saveData(entries) {
-  chrome.runtime.sendMessage({ entries });
+  chrome.runtime.sendMessage({ action: "saveData", entries });
 }

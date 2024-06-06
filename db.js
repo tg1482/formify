@@ -19,7 +19,7 @@ export function initDB() {
   request.onsuccess = function (event) {
     // storeFormData({ header: "test", test: { value: "test", created_at: new Date() } });
     console.log("Database opened successfully");
-    readAllData();
+    // readAllData();
   };
 }
 
@@ -81,31 +81,35 @@ export function readData(key) {
 }
 
 export function readAllData() {
-  const open_request = indexedDB.open(dbName);
+  return new Promise((resolve, reject) => {
+    const open_request = indexedDB.open(dbName);
+    const data = [];
+    open_request.onsuccess = function (event) {
+      const db = event.target.result;
+      const transaction = db.transaction(storeName, "readonly");
+      const store = transaction.objectStore(storeName);
+      const cursor_request = store.openCursor();
 
-  open_request.onsuccess = function (event) {
-    const db = event.target.result;
-    const transaction = db.transaction(storeName, "readonly");
-    const store = transaction.objectStore(storeName);
-    const cursor_request = store.openCursor();
+      cursor_request.onsuccess = function (event) {
+        const cursor = event.target.result;
+        if (cursor) {
+          data.push(cursor.value);
+          cursor.continue(); // Move to the next object in the store
+        } else {
+          console.log("No more entries!");
+          resolve(data); // Resolve the promise with the data when done
+        }
+      };
 
-    cursor_request.onsuccess = function (event) {
-      const cursor = event.target.result;
-      if (cursor) {
-        console.log("Data key:", cursor.key);
-        console.log("Data read:", cursor.value);
-        cursor.continue(); // Move to the next object in the store
-      } else {
-        console.log("No more entries!");
-      }
+      cursor_request.onerror = function (event) {
+        console.error("Failed to read data:", event.target.error);
+        reject(event.target.error); // Reject the promise on error
+      };
     };
 
-    cursor_request.onerror = function (event) {
-      console.error("Failed to read data:", event.target.error);
+    open_request.onerror = function (event) {
+      console.error("Database error:", event.target.errorCode);
+      reject(event.target.errorCode); // Reject the promise on error
     };
-  };
-
-  open_request.onerror = function (event) {
-    console.error("Database error:", event.target.errorCode);
-  };
+  });
 }

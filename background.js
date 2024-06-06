@@ -1,4 +1,4 @@
-import { initDB, storeFormData } from "./db.js";
+import { initDB, storeFormData, readAllData } from "./db.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension installed");
@@ -7,9 +7,17 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Message received");
-  console.log(request);
-  storeFormData(request.entries);
-  sendResponse({ status: "Data stored" });
-  return true; // To indicate asynchronous response
+  if (request.action === "fetchData") {
+    readAllData().then((values) => {
+      console.log("Values", values);
+      sendResponse({ entries: values });
+    });
+    return true;
+  }
+
+  if (request.action === "saveData") {
+    storeFormData(request.entries);
+    sendResponse({ status: "Data stored" });
+    return true; // To indicate asynchronous response
+  }
 });
