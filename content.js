@@ -112,6 +112,11 @@ function fetchDataFromDB(keyword) {
     const container = document.getElementById(containerId);
     container.innerHTML = ""; // Clear previous data
 
+    // Sort the entries by createdAt date
+    response.entries.sort((a, b) => {
+      return new Date(b.data.createdAt) - new Date(a.data.createdAt);
+    });
+
     response.entries?.forEach((entry) => {
       const div = document.createElement("div");
       div.style.border = "1px solid #ddd";
