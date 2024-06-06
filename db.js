@@ -16,11 +16,7 @@ export function initDB() {
     console.error("Database error: " + event.target.errorCode);
   };
 
-  request.onsuccess = function (event) {
-    // storeFormData({ header: "test", test: { value: "test", created_at: new Date() } });
-    console.log("Database opened successfully");
-    // readAllData();
-  };
+  request.onsuccess = function (event) {};
 }
 
 export function storeFormData(data) {
@@ -37,9 +33,7 @@ export function storeFormData(data) {
     for (const [key, value] of Object.entries(data)) {
       const update_request = store.put({ id: cleanString(key), data: value });
 
-      update_request.onsuccess = function () {
-        console.log("Form data stored for key:", key, "value:", value);
-      };
+      update_request.onsuccess = function () {};
 
       update_request.onerror = function (event) {
         console.error("Failed to store form data for key:", key, "error:", event.target.error);
@@ -47,9 +41,7 @@ export function storeFormData(data) {
     }
 
     // Listen to transaction complete to confirm data is written
-    transaction.oncomplete = function () {
-      console.log("Transaction completed.");
-    };
+    transaction.oncomplete = function () {};
 
     transaction.onerror = function (event) {
       console.error("Transaction failed: ", event.target.error);
@@ -70,9 +62,7 @@ export function readData(key) {
     const store = transaction.objectStore(storeName);
     const get_request = store.get(key);
 
-    get_request.onsuccess = function (event) {
-      console.log("Data read", event.target.result);
-    };
+    get_request.onsuccess = function (event) {};
 
     get_request.onerror = function (event) {
       console.error("Failed to read data:", event.target.error);
@@ -96,7 +86,6 @@ export function readAllData() {
           data.push(cursor.value);
           cursor.continue(); // Move to the next object in the store
         } else {
-          console.log("No more entries!");
           resolve(data); // Resolve the promise with the data when done
         }
       };
@@ -127,14 +116,11 @@ export function searchData(keyword) {
       cursor_request.onsuccess = function (event) {
         const cursor = event.target.result;
         if (cursor) {
-          console.log(cursor);
           if (cursor.key.toLowerCase().includes(keyword.toLowerCase())) {
             filteredData.push(cursor.value);
           }
           cursor.continue();
         } else {
-          console.log("No more entries!");
-          console.log("Filtered data:", filteredData);
           resolve(filteredData); // Resolve the promise with filtered data
         }
       };
@@ -161,17 +147,13 @@ export function deleteKey(key) {
     const store = transaction.objectStore(storeName);
     const delete_request = store.delete(key);
 
-    delete_request.onsuccess = function () {
-      console.log("Data deleted successfully for key:", key);
-    };
+    delete_request.onsuccess = function () {};
 
     delete_request.onerror = function (event) {
       console.error("Failed to delete data for key:", key, "error:", event.target.error);
     };
 
-    transaction.oncomplete = function () {
-      console.log("Transaction completed: data deletion.");
-    };
+    transaction.oncomplete = function () {};
 
     transaction.onerror = function (event) {
       console.error("Transaction failed on deletion:", event.target.error);
@@ -200,9 +182,7 @@ export function deleteAllData() {
       console.error("Failed to delete all data:", event.target.error);
     };
 
-    transaction.oncomplete = function () {
-      console.log("Transaction completed: all data deletion.");
-    };
+    transaction.oncomplete = function () {};
 
     transaction.onerror = function (event) {
       console.error("Transaction failed on all data deletion:", event.target.error);

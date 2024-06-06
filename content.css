@@ -1,4 +1,4 @@
-#formify-sidebar {
+#formie-sidebar {
   width: 500px;
   height: 100%;
   position: fixed;
@@ -26,7 +26,7 @@
   transform: translateX(-50%);
 }
 
-#formify-sidebar h1 {
+#formie-sidebar h1 {
   text-align: center;
   font-size: 24px;
   font-weight: bold;

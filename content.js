@@ -1,5 +1,3 @@
-console.log("Formify content script loaded");
-
 function addCustomSidebar() {
   const link = document.createElement("link");
   link.rel = "stylesheet";
@@ -7,7 +5,7 @@ function addCustomSidebar() {
   (document.head || document.documentElement).appendChild(link);
 
   const sidebar = document.createElement("div");
-  sidebar.id = "formify-sidebar";
+  sidebar.id = "formie-sidebar";
 
   const closeButton = document.createElement("button");
   closeButton.textContent = "❌";
@@ -18,7 +16,7 @@ function addCustomSidebar() {
   sidebar.appendChild(closeButton);
 
   const header = document.createElement("h1");
-  header.textContent = "Formify Data";
+  header.textContent = "Formie Data";
   sidebar.appendChild(header);
 
   const contentPrevious = document.createElement("div");
@@ -96,12 +94,12 @@ function handleTextSelection() {
   const element = selectionNode.nodeType === Node.ELEMENT_NODE ? selectionNode : selectionNode.parentNode;
 
   // Check if the selection is inside the sidebar using closest
-  if (element && element.closest("#formify-sidebar")) {
+  if (element && element.closest("#formie-sidebar")) {
     return; // Ignore selections inside the sidebar
   }
 
   if (selectedText.length > 2) {
-    const searchBar = document.querySelector("#formify-sidebar input");
+    const searchBar = document.querySelector("#formie-sidebar input");
     searchBar.value = selectedText;
     searchBar.dispatchEvent(new Event("input"));
   }
@@ -118,7 +116,6 @@ function fetchDataFromDB(keyword) {
   }
 
   chrome.runtime.sendMessage(message, (response) => {
-    console.log("Search results", response);
     const container = document.getElementById(containerId);
     container.innerHTML = ""; // Clear previous data
 
@@ -188,7 +185,6 @@ function dataEntryTemplate(entry, container) {
 }
 
 function init() {
-  console.log("Formify content script initialized with DOM");
   const url = window.location.href;
   const pageHeader = document.title;
   const createdAt = new Date().toISOString();
@@ -196,15 +192,11 @@ function init() {
   document.querySelectorAll("input, textarea").forEach((input) => {
     // Attach blur listener to each input/textarea
     input.addEventListener("blur", () => {
-      console.log("Input blurred", input);
       let key = findLabel(input);
 
       // Prepare data object
       const value = input.value;
       const data = { value, url, pageHeader, createdAt };
-
-      // Log the entry using found label as key
-      console.log("Input blurred", { [key]: data });
 
       // Optionally, send the data somewhere, like to saveData function
       if (key && value) {
@@ -235,12 +227,11 @@ function findLabel(input) {
 function setupObserver() {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
-      console.log("Mutation", mutation);
       if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
         // ensure that the added node is not my custom sidebar
         let relatedToSidebar =
-          Array.from(mutation.addedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formify-sidebar")) ||
-          Array.from(mutation.removedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formify-sidebar"));
+          Array.from(mutation.addedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formie-sidebar")) ||
+          Array.from(mutation.removedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formie-sidebar"));
 
         if (!relatedToSidebar) {
           init();
@@ -274,7 +265,7 @@ function saveData(entries) {
 }
 
 function toggleSideBar() {
-  const sidebar = document.getElementById("formify-sidebar");
+  const sidebar = document.getElementById("formie-sidebar");
   if (sidebar) {
     sidebar.remove();
   } else {
@@ -286,11 +277,9 @@ document.addEventListener("keydown", function (event) {
   // Fetch hotkeys from storage only once or when needed, not on every keydown
   chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
     if (chrome.runtime.lastError) {
-      console.error("Error fetching hotkeys:", chrome.runtime.lastError);
       return;
     }
 
-    console.log("Hotkeys", items);
     if (items.hotKey1 && items.hotKey2) {
       // Check if the fetched hotkeys are pressed
       if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
@@ -301,7 +290,6 @@ document.addEventListener("keydown", function (event) {
 });
 
 function checkHotkeys(event, hotKey1, hotKey2) {
-  console.log("Event", event);
   const key1 = hotKey1.toLowerCase();
   const key2 = hotKey2.toLowerCase();
 
