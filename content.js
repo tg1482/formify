@@ -30,6 +30,9 @@ function addCustomSidebar() {
   const searchBar = document.createElement("input");
   searchBar.type = "text";
   searchBar.placeholder = "Search...";
+  searchBar.addEventListener("input", (e) => {
+    fetchDataFromDB(e.target.value || "all");
+  });
   searchBarContainer.appendChild(searchBar);
   contentPrevious.appendChild(searchBarContainer);
 
@@ -77,6 +80,16 @@ function setupResizeHandle(resizeHandle) {
 
 function handleTextSelection() {
   const selectedText = window.getSelection().toString().trim();
+  const selectionNode = window.getSelection().anchorNode;
+
+  // Ensure the selectionNode is an element or use its parent if it's a text node
+  const element = selectionNode.nodeType === Node.ELEMENT_NODE ? selectionNode : selectionNode.parentNode;
+
+  // Check if the selection is inside the sidebar using closest
+  if (element && element.closest("#formify-sidebar")) {
+    return; // Ignore selections inside the sidebar
+  }
+
   if (selectedText.length > 2) {
     const searchBar = document.querySelector("#formify-sidebar input");
     searchBar.value = selectedText;
@@ -118,9 +131,9 @@ function dataEntryTemplate(entry, container) {
   id.innerHTML = `<strong>${entry.id}</strong>`;
   div.appendChild(id);
 
-  const value = document.createElement("p");
-  value.innerHTML = `<strong>Value:</strong> "${entry.data.value}"`;
-  div.appendChild(value);
+  const valueContainer = document.createElement("div");
+  valueContainer.style.display = "flex";
+  valueContainer.style.alignItems = "center";
 
   const copyButton = document.createElement("button");
   copyButton.textContent = "📋";
@@ -133,13 +146,22 @@ function dataEntryTemplate(entry, container) {
       }, 2000);
     });
   };
-  div.appendChild(copyButton);
+  valueContainer.appendChild(copyButton);
+
+  const value = document.createElement("p");
+  value.innerHTML = `"${entry.data.value}"`;
+  value.style.marginLeft = "10px"; // Add space between button and value
+  valueContainer.appendChild(value);
+
+  div.appendChild(valueContainer);
 
   const pageHeader = document.createElement("p");
+  pageHeader.style.fontSize = "12px";
   pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
   div.appendChild(pageHeader);
 
   const createdAt = document.createElement("p");
+  createdAt.style.fontSize = "12px";
   createdAt.innerHTML = `<strong>Updated:</strong> <i>${timeSince(entry.data.createdAt)}</i>`;
   div.appendChild(createdAt);
 

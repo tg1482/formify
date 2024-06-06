@@ -79,13 +79,20 @@
   margin-bottom: 10px;
 }
 
+.data-entry .copy-button {
+  margin-top: 0; /* Adjust margin as needed */
+}
+
+.data-entry div {
+  display: flex;
+  align-items: center;
+  border: none;
+}
+
 .data-entry p {
   text-align: left;
   overflow-wrap: break-word;
-}
-
-.data-entry .copy-button {
-  margin-top: 10px;
+  margin: 0; /* Remove default margin */
 }
 
 .data-entry .delete-button {
