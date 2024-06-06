@@ -17,75 +17,41 @@ function addCustomSidebar() {
   header.style.fontSize = "24px";
   header.style.fontWeight = "bold";
   header.style.padding = "10px";
-  header.textContent = "Data Viewer";
+  header.textContent = "Formify Data";
   sidebar.appendChild(header);
-
-  // Create tab controls
-  const tabContainer = document.createElement("div");
-  tabContainer.style.display = "flex";
-  tabContainer.style.justifyContent = "space-around";
-  tabContainer.style.marginBottom = "10px";
-
-  const tab1 = document.createElement("button");
-  tab1.textContent = "Previous Data";
-  tab1.style.flex = "1";
-  tab1.style.cursor = "pointer";
-  tab1.style.padding = "10px";
-  tab1.style.borderBottom = "3px solid transparent";
-
-  const tab2 = document.createElement("button");
-  tab2.textContent = "All Data";
-  tab2.style.flex = "1";
-  tab2.style.cursor = "pointer";
-  tab2.style.padding = "10px";
-  tab2.style.borderBottom = "3px solid transparent";
-
-  tabContainer.appendChild(tab1);
-  tabContainer.appendChild(tab2);
-  sidebar.appendChild(tabContainer);
 
   // Create content containers for each tab
   const contentPrevious = document.createElement("div");
   contentPrevious.id = "contentPrevious";
-  contentPrevious.style.display = "none"; // Initially hidden
   contentPrevious.style.overflowY = "auto";
   contentPrevious.style.height = "calc(100% - 140px)";
   contentPrevious.style.padding = "10px";
 
-  const contentAll = document.createElement("div");
-  contentAll.id = "contentAll";
-  contentAll.style.display = "none"; // Initially hidden
-  contentAll.style.overflowY = "auto";
-  contentAll.style.height = "calc(100% - 140px)";
-  contentAll.style.padding = "10px";
+  // Create a search bar container
+  const searchBarContainer = document.createElement("div");
+  searchBarContainer.style.padding = "10px";
+
+  const searchBar = document.createElement("input");
+  searchBar.type = "text";
+  searchBar.placeholder = "Search...";
+  searchBar.style.width = "100%";
+  searchBar.style.padding = "10px";
+  searchBar.style.marginBottom = "10px";
+  searchBar.addEventListener("input", function () {
+    fetchDataFromDB(searchBar.value || "all");
+  });
+  searchBarContainer.appendChild(searchBar);
+  contentPrevious.appendChild(searchBarContainer);
+
+  // Create a container specifically for the data below the search bar
+  const dataContainer = document.createElement("div");
+  dataContainer.id = "dataContainer";
+  contentPrevious.appendChild(dataContainer);
 
   sidebar.appendChild(contentPrevious);
-  sidebar.appendChild(contentAll);
+  fetchDataFromDB("all");
 
   document.body.appendChild(sidebar);
-
-  // Tab functionality
-  function switchTab(tab) {
-    if (tab === "previous") {
-      contentPrevious.style.display = "block";
-      contentAll.style.display = "none";
-      tab1.style.borderBottom = "3px solid blue";
-      tab2.style.borderBottom = "3px solid transparent";
-    } else {
-      contentPrevious.style.display = "none";
-      contentAll.style.display = "block";
-      tab1.style.borderBottom = "3px solid transparent";
-      tab2.style.borderBottom = "3px solid blue";
-      fetchDataFromDB("all");
-    }
-  }
-
-  // Event listeners for tabs
-  tab1.onclick = () => switchTab("previous");
-  tab2.onclick = () => switchTab("all");
-
-  // Default to show "Previous Data"
-  switchTab("previous");
 
   // Create a resize handle
   const resizeHandle = document.createElement("div");
@@ -125,20 +91,20 @@ function addCustomSidebar() {
 function handleTextSelection() {
   const selectedText = window.getSelection().toString().trim();
   if (selectedText.length > 2) {
-    fetchDataFromDB(selectedText);
+    const searchBar = document.querySelector("#formify-sidebar input");
+    searchBar.value = selectedText;
+    searchBar.dispatchEvent(new Event("input"));
   }
 }
 
 function fetchDataFromDB(keyword) {
   let message;
-  let containerId = "contentPrevious";
+  let containerId = "dataContainer";
 
   if (keyword == "all") {
     message = { action: "fetchData" };
-    containerId = "contentAll";
   } else {
     message = { action: "searchData", keyword: keyword };
-    containerId = "contentPrevious";
   }
 
   chrome.runtime.sendMessage(message, (response) => {
