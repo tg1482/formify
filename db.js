@@ -113,3 +113,41 @@ export function readAllData() {
     };
   });
 }
+
+export function searchData(keyword) {
+  return new Promise((resolve, reject) => {
+    const open_request = indexedDB.open(dbName);
+    const filteredData = [];
+    open_request.onsuccess = function (event) {
+      const db = event.target.result;
+      const transaction = db.transaction(storeName, "readonly");
+      const store = transaction.objectStore(storeName);
+      const cursor_request = store.openCursor();
+
+      cursor_request.onsuccess = function (event) {
+        const cursor = event.target.result;
+        if (cursor) {
+          console.log(cursor);
+          if (cursor.key.toLowerCase().includes(keyword.toLowerCase())) {
+            filteredData.push(cursor.value);
+          }
+          cursor.continue();
+        } else {
+          console.log("No more entries!");
+          console.log("Filtered data:", filteredData);
+          resolve(filteredData); // Resolve the promise with filtered data
+        }
+      };
+
+      cursor_request.onerror = function (event) {
+        console.error("Failed to read data:", event.target.error);
+        reject(event.target.error); // Reject the promise on error
+      };
+    };
+
+    open_request.onerror = function (event) {
+      console.error("Database error:", event.target.errorCode);
+      reject(event.target.errorCode); // Reject the promise on error
+    };
+  });
+}
