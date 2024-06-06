@@ -1,49 +1,30 @@
 console.log("Formify content script loaded");
 
 function addCustomSidebar() {
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = chrome.runtime.getURL("content.css");
+  (document.head || document.documentElement).appendChild(link);
+
   const sidebar = document.createElement("div");
   sidebar.id = "formify-sidebar";
-  sidebar.style.width = "500px";
-  sidebar.style.height = "100%";
-  sidebar.style.position = "fixed";
-  sidebar.style.top = "0";
-  sidebar.style.right = "0";
-  sidebar.style.backgroundColor = "white";
-  sidebar.style.boxShadow = "0 0 8px rgba(0,0,0,0.5)";
-  sidebar.style.zIndex = "9999";
 
   const header = document.createElement("h1");
-  header.style.textAlign = "center";
-  header.style.fontSize = "24px";
-  header.style.fontWeight = "bold";
-  header.style.padding = "10px";
   header.textContent = "Formify Data";
   sidebar.appendChild(header);
 
-  // Create content containers for each tab
   const contentPrevious = document.createElement("div");
   contentPrevious.id = "contentPrevious";
-  contentPrevious.style.overflowY = "auto";
-  contentPrevious.style.height = "calc(100% - 140px)";
-  contentPrevious.style.padding = "10px";
 
-  // Create a search bar container
   const searchBarContainer = document.createElement("div");
-  searchBarContainer.style.padding = "10px";
+  searchBarContainer.className = "search-bar-container";
 
   const searchBar = document.createElement("input");
   searchBar.type = "text";
   searchBar.placeholder = "Search...";
-  searchBar.style.width = "100%";
-  searchBar.style.padding = "10px";
-  searchBar.style.marginBottom = "10px";
-  searchBar.addEventListener("input", function () {
-    fetchDataFromDB(searchBar.value || "all");
-  });
   searchBarContainer.appendChild(searchBar);
   contentPrevious.appendChild(searchBarContainer);
 
-  // Create a container specifically for the data below the search bar
   const dataContainer = document.createElement("div");
   dataContainer.id = "dataContainer";
   contentPrevious.appendChild(dataContainer);
@@ -53,16 +34,16 @@ function addCustomSidebar() {
 
   document.body.appendChild(sidebar);
 
-  // Create a resize handle
   const resizeHandle = document.createElement("div");
-  resizeHandle.style.width = "10px";
-  resizeHandle.style.height = "100%";
-  resizeHandle.style.position = "absolute";
-  resizeHandle.style.left = "0";
-  resizeHandle.style.top = "0";
-  resizeHandle.style.cursor = "ew-resize";
+  resizeHandle.className = "resize-handle";
   sidebar.appendChild(resizeHandle);
 
+  setupResizeHandle(resizeHandle);
+  document.addEventListener("mouseup", handleTextSelection);
+}
+
+// Extracted resize handle setup to a function
+function setupResizeHandle(resizeHandle) {
   let isResizing = false;
   let lastPageX;
 
@@ -75,8 +56,8 @@ function addCustomSidebar() {
   document.addEventListener("mousemove", function (e) {
     if (isResizing) {
       const diff = e.pageX - lastPageX;
-      const newWidth = parseInt(window.getComputedStyle(sidebar).width, 10) - diff;
-      sidebar.style.width = `${newWidth}px`;
+      const newWidth = parseInt(window.getComputedStyle(resizeHandle.parentNode).width, 10) - diff;
+      resizeHandle.parentNode.style.width = `${newWidth}px`;
       lastPageX = e.pageX;
     }
   });
@@ -84,8 +65,6 @@ function addCustomSidebar() {
   document.addEventListener("mouseup", function (e) {
     isResizing = false;
   });
-
-  document.addEventListener("mouseup", handleTextSelection);
 }
 
 function handleTextSelection() {
@@ -125,22 +104,13 @@ function fetchDataFromDB(keyword) {
 
 function dataEntryTemplate(entry, container) {
   const div = document.createElement("div");
-  div.style.border = "1px solid #ddd";
-  div.style.borderRadius = "8px";
-  div.style.padding = "10px 10px";
-  div.style.marginBottom = "10px";
-  div.style.marginLeft = "10px";
-  div.style.marginRight = "10px";
-  div.style.backgroundColor = "#f9f9f9";
-  div.style.position = "relative"; // Ensure position context for absolute positioning of delete button
+  div.className = "data-entry";
 
-  const id = document.createElement("p");
-  id.style.textAlign = "center";
+  const id = document.createElement("h3");
   id.innerHTML = `<strong>${entry.id}</strong>`;
   div.appendChild(id);
 
   const value = document.createElement("p");
-  value.style.overflowWrap = "break-word";
   value.innerHTML = `<strong>Value:</strong> "${entry.data.value}"`;
   div.appendChild(value);
 
@@ -149,27 +119,25 @@ function dataEntryTemplate(entry, container) {
   div.appendChild(pageHeader);
 
   const createdAt = document.createElement("p");
-  createdAt.innerHTML = `<i>${timeSince(entry.data.createdAt)}</i>`;
+  createdAt.innerHTML = `<strong>Updated:</strong> <i>${timeSince(entry.data.createdAt)}</i>`;
   div.appendChild(createdAt);
 
   const copyButton = document.createElement("button");
   copyButton.textContent = "Copy Value";
-  copyButton.style.marginTop = "10px";
+  copyButton.className = "copy-button";
   copyButton.onclick = () => {
     navigator.clipboard.writeText(entry.data.value).then(() => {
       copyButton.textContent = "✔️";
       setTimeout(() => {
         copyButton.textContent = "Copy Value";
-      }, 5000);
+      }, 2000);
     });
   };
   div.appendChild(copyButton);
 
   const deleteButton = document.createElement("button");
   deleteButton.textContent = "Delete";
-  deleteButton.style.position = "absolute";
-  deleteButton.style.top = "10px";
-  deleteButton.style.right = "10px";
+  deleteButton.className = "delete-button";
   deleteButton.onclick = () => {
     div.remove(); // Remove the entry div from the DOM
     chrome.runtime.sendMessage({ action: "deleteKey", id: entry.id });

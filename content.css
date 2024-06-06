@@ -1,0 +1,90 @@
+#formify-sidebar {
+  width: 500px;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  right: 0;
+  background-color: white;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  color: black;
+  border-left: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+#formify-sidebar h1 {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  padding: 10px;
+}
+
+#contentPrevious {
+  overflow-y: auto;
+  height: calc(100% - 140px);
+  padding: 10px;
+}
+
+.search-bar-container {
+  padding: 10px;
+}
+
+.search-bar-container input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+#dataContainer div {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 10px;
+  margin-bottom: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
+  background-color: #f9f9f9;
+  position: relative;
+}
+
+.resize-handle {
+  width: 10px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  cursor: ew-resize;
+}
+
+.data-entry {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 10px;
+  background-color: #f9f9f9;
+  position: relative; /* For absolute positioning of the delete button */
+}
+
+.data-entry h3 {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.data-entry p {
+  text-align: left;
+  overflow-wrap: break-word;
+}
+
+.data-entry .delete-button {
+  margin-top: 10px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.data-entry .copy-button {
+  margin-top: 10px;
+}
