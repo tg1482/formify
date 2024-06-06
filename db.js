@@ -3,8 +3,6 @@ const storeName = "entries";
 
 export function initDB() {
   let db;
-  const delete_request = indexedDB.deleteDatabase(dbName);
-
   const request = indexedDB.open(dbName, 1);
 
   request.onupgradeneeded = function (event) {
@@ -19,9 +17,8 @@ export function initDB() {
   };
 
   request.onsuccess = function (event) {
-    storeFormData({ header: "test", data: "test" });
+    // storeFormData({ header: "test", test: { value: "test", created_at: new Date() } });
     console.log("Database opened successfully");
-    readData(1);
     readAllData();
   };
 }

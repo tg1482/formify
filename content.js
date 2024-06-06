@@ -2,15 +2,21 @@ console.log("Formify content script loaded");
 
 function init() {
   console.log("Formify content script loaded with DOM");
+  const url = window.location.href;
+  const pageHeader = document.title;
   const forms = document.querySelectorAll("form");
+  const createdAt = new Date().toISOString();
   forms.forEach((form) => {
     form.addEventListener("submit", (event) => {
       console.log("Form submitted");
       const data = new FormData(form);
       const entries = {};
       for (const [key, value] of data) {
-        entries[key] = value;
+        const newObject = { value, url, pageHeader, createdAt };
+        console.log(key, newObject);
+        entries[key] = newObject;
       }
+      console.log(entries);
 
       saveData(entries);
     });
