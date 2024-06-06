@@ -118,61 +118,65 @@ function fetchDataFromDB(keyword) {
     });
 
     response.entries?.forEach((entry) => {
-      const div = document.createElement("div");
-      div.style.border = "1px solid #ddd";
-      div.style.borderRadius = "8px";
-      div.style.padding = "10px 10px";
-      div.style.marginBottom = "10px";
-      div.style.marginLeft = "10px";
-      div.style.marginRight = "10px";
-      div.style.backgroundColor = "#f9f9f9";
-      div.style.position = "relative"; // Ensure position context for absolute positioning of delete button
-
-      const id = document.createElement("p");
-      id.style.textAlign = "center";
-      id.innerHTML = `<strong>${entry.id}</strong>`;
-      div.appendChild(id);
-
-      const value = document.createElement("p");
-      value.style.overflowWrap = "break-word";
-      value.innerHTML = `<strong>Value:</strong> "${entry.data.value}"`;
-      div.appendChild(value);
-
-      const pageHeader = document.createElement("p");
-      pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
-      div.appendChild(pageHeader);
-
-      const createdAt = document.createElement("p");
-      createdAt.innerHTML = `<i>${timeSince(entry.data.createdAt)}</i>`;
-      div.appendChild(createdAt);
-
-      const copyButton = document.createElement("button");
-      copyButton.textContent = "Copy Value";
-      copyButton.style.marginTop = "10px";
-      copyButton.onclick = () => {
-        navigator.clipboard.writeText(entry.data.value).then(() => {
-          copyButton.textContent = "✔️";
-          setTimeout(() => {
-            copyButton.textContent = "Copy Value";
-          }, 5000);
-        });
-      };
-      div.appendChild(copyButton);
-
-      const deleteButton = document.createElement("button");
-      deleteButton.textContent = "Delete";
-      deleteButton.style.position = "absolute";
-      deleteButton.style.top = "10px";
-      deleteButton.style.right = "10px";
-      deleteButton.onclick = () => {
-        div.remove(); // Remove the entry div from the DOM
-        chrome.runtime.sendMessage({ action: "deleteKey", id: entry.id });
-      };
-      div.appendChild(deleteButton);
-
-      container.appendChild(div);
+      dataEntryTemplate(entry, container);
     });
   });
+}
+
+function dataEntryTemplate(entry, container) {
+  const div = document.createElement("div");
+  div.style.border = "1px solid #ddd";
+  div.style.borderRadius = "8px";
+  div.style.padding = "10px 10px";
+  div.style.marginBottom = "10px";
+  div.style.marginLeft = "10px";
+  div.style.marginRight = "10px";
+  div.style.backgroundColor = "#f9f9f9";
+  div.style.position = "relative"; // Ensure position context for absolute positioning of delete button
+
+  const id = document.createElement("p");
+  id.style.textAlign = "center";
+  id.innerHTML = `<strong>${entry.id}</strong>`;
+  div.appendChild(id);
+
+  const value = document.createElement("p");
+  value.style.overflowWrap = "break-word";
+  value.innerHTML = `<strong>Value:</strong> "${entry.data.value}"`;
+  div.appendChild(value);
+
+  const pageHeader = document.createElement("p");
+  pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
+  div.appendChild(pageHeader);
+
+  const createdAt = document.createElement("p");
+  createdAt.innerHTML = `<i>${timeSince(entry.data.createdAt)}</i>`;
+  div.appendChild(createdAt);
+
+  const copyButton = document.createElement("button");
+  copyButton.textContent = "Copy Value";
+  copyButton.style.marginTop = "10px";
+  copyButton.onclick = () => {
+    navigator.clipboard.writeText(entry.data.value).then(() => {
+      copyButton.textContent = "✔️";
+      setTimeout(() => {
+        copyButton.textContent = "Copy Value";
+      }, 5000);
+    });
+  };
+  div.appendChild(copyButton);
+
+  const deleteButton = document.createElement("button");
+  deleteButton.textContent = "Delete";
+  deleteButton.style.position = "absolute";
+  deleteButton.style.top = "10px";
+  deleteButton.style.right = "10px";
+  deleteButton.onclick = () => {
+    div.remove(); // Remove the entry div from the DOM
+    chrome.runtime.sendMessage({ action: "deleteKey", id: entry.id });
+  };
+  div.appendChild(deleteButton);
+
+  container.appendChild(div);
 }
 
 function init() {
