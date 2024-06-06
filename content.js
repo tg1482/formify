@@ -1,35 +1,79 @@
 console.log("Formify content script loaded");
 
 function init() {
-  console.log("Formify content script loaded with DOM");
+  console.log("Formify content script initialized with DOM");
   const url = window.location.href;
   const pageHeader = document.title;
-  const forms = document.querySelectorAll("form");
   const createdAt = new Date().toISOString();
-  forms.forEach((form) => {
-    form.addEventListener("submit", (event) => {
-      console.log("Form submitted");
-      const data = new FormData(form);
-      const entries = {};
-      for (const [key, value] of data) {
-        const newObject = { value, url, pageHeader, createdAt };
-        console.log(key, newObject);
-        entries[key] = newObject;
-      }
-      console.log(entries);
 
-      saveData(entries);
+  document.querySelectorAll("input, textarea").forEach((input) => {
+    // Attach blur listener to each input/textarea
+    console.log("Input found", input);
+    input.addEventListener("blur", () => {
+      console.log("Input blurred", input);
+      let key = findLabel(input);
+
+      // Prepare data object
+      const value = input.value;
+      const data = { value, url, pageHeader, createdAt };
+
+      // Log the entry using found label as key
+      console.log({ [key]: data });
+
+      // Optionally, send the data somewhere, like to saveData function
+      if (key && value) {
+        saveData({ [key]: data });
+      }
     });
   });
 }
 
-// Check if the document is already loaded
+// Function to find the correct label or paragraph tag for an input
+function findLabel(input) {
+  const id = input.id;
+  let label = document.querySelector(`label[for="${id}"]`);
+  if (!label) {
+    // If no label with 'for', find the closest preceding sibling that is a label or p tag
+    let sibling = input.previousElementSibling;
+    while (sibling) {
+      if (sibling.tagName === "LABEL" || sibling.tagName === "P") {
+        label = sibling;
+        break;
+      }
+      sibling = sibling.previousElementSibling;
+    }
+  }
+  return label ? label.innerText.trim() : "Unknown";
+}
+
+function setupObserver() {
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+        console.log("New elements added to DOM, reinitializing...");
+        init();
+      }
+    });
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+}
+
 if (document.readyState === "loading") {
-  // Loading hasn't finished yet
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+      init();
+      setupObserver();
+    }, 5000);
+  });
 } else {
-  // `DOMContentLoaded` has already fired
-  init();
+  setTimeout(() => {
+    init();
+    setupObserver();
+  }, 5000);
 }
 
 function saveData(entries) {
