@@ -10,8 +10,10 @@
         font-family: "Arial", sans-serif;
         background-color: #f4f4f4;
         color: #333;
+        width: 300px;
       }
-      h1 {
+      h1,
+      h2 {
         text-align: center;
         color: #333;
       }
@@ -20,24 +22,25 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        width: 300px;
-      }
-      .settings-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin: 20px 0;
         width: 100%;
       }
-      label {
-        margin-right: 10px;
-        font-weight: bold;
+      .hotkey-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+        width: 80%; /* Adjust width as needed */
       }
       select {
         padding: 8px;
         border-radius: 5px;
         border: 1px solid #ccc;
-        width: 60%;
+        width: 100px; /* Adjust based on your design preferences */
+      }
+      .plus-sign {
+        margin: 0 20px;
+        font-size: 24px;
+        color: #333;
       }
       button {
         padding: 10px 20px;
@@ -48,6 +51,7 @@
         cursor: pointer;
         font-size: 16px;
         transition: background-color 0.3s;
+        width: 100px; /* Adjusted for side by side display */
       }
       button:hover {
         background-color: #45a049;
@@ -55,23 +59,20 @@
     </style>
   </head>
   <body>
-    <h1>Settings</h1>
+    <h1>Formify Controls</h1>
+    <h2>Hotkey Settings</h2>
     <div class="settings-container">
-      <div class="settings-row">
-        <label for="formify-key1">Hot Key 1:</label>
+      <div class="hotkey-container">
         <select id="formify-key1">
           <option value="Ctrl">Ctrl</option>
           <option value="Alt">Alt / Option</option>
           <option value="Shift">Shift</option>
         </select>
-      </div>
-      <div class="settings-row">
-        <label for="formify-key2">Hot Key 2:</label>
+        <span class="plus-sign">+</span>
         <select id="formify-key2"></select>
       </div>
-      <button onclick="saveSettings()">Save</button>
+      <button id="saveButton">Save</button>
     </div>
-
     <script src="popup.js"></script>
   </body>
 </html>

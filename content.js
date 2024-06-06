@@ -2,7 +2,7 @@ console.log("Formify content script loaded");
 
 function addCustomSidebar() {
   const sidebar = document.createElement("div");
-  sidebar.id = "my-custom-sidebar";
+  sidebar.id = "formify-sidebar";
   sidebar.style.width = "500px";
   sidebar.style.height = "100%";
   sidebar.style.position = "fixed";
@@ -256,8 +256,8 @@ function setupObserver() {
       if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
         // ensure that the added node is not my custom sidebar
         let relatedToSidebar =
-          Array.from(mutation.addedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#my-custom-sidebar")) ||
-          Array.from(mutation.removedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#my-custom-sidebar"));
+          Array.from(mutation.addedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formify-sidebar")) ||
+          Array.from(mutation.removedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formify-sidebar"));
 
         if (!relatedToSidebar) {
           init();
@@ -290,15 +290,47 @@ function saveData(entries) {
   chrome.runtime.sendMessage({ action: "saveData", entries });
 }
 
-document.addEventListener("keydown", function (event) {
-  console.log("Keydown", event);
-  // Check if 'Option' (or 'Alt') and 'O' are pressed together
-  if (event.ctrlKey && event.key === "o") {
-    // Check if the sidebar does not already exist
-    if (!document.getElementById("my-custom-sidebar")) {
-      addCustomSidebar();
-    }
+function checkHotkeys(event, hotKey1, hotKey2) {
+  console.log("Event", event);
+  const key1 = hotKey1.toLowerCase();
+  const key2 = hotKey2.toLowerCase();
+
+  if (key1 === "ctrl" && !event.ctrlKey) return false;
+  if (key1 === "shift" && !event.shiftKey) return false;
+  if (key1 === "alt" && !event.altKey) return false;
+
+  // Check if the correct combination of keys is pressed
+  if (event.key.toLowerCase() === key2) {
+    return true;
   }
+  return false;
+}
+
+function toggleSideBar() {
+  const sidebar = document.getElementById("formify-sidebar");
+  if (sidebar) {
+    sidebar.remove();
+  } else {
+    addCustomSidebar();
+  }
+}
+
+document.addEventListener("keydown", function (event) {
+  // Fetch hotkeys from storage only once or when needed, not on every keydown
+  chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
+    if (chrome.runtime.lastError) {
+      console.error("Error fetching hotkeys:", chrome.runtime.lastError);
+      return;
+    }
+
+    console.log("Hotkeys", items);
+    if (items.hotKey1 && items.hotKey2) {
+      // Check if the fetched hotkeys are pressed
+      if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
+        toggleSideBar();
+      }
+    }
+  });
 });
 
 function timeSince(date) {

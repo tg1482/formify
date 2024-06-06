@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const option = document.createElement("option");
     option.value = String.fromCharCode(i);
     option.text = String.fromCharCode(i);
+    if (i === 79) {
+      option.selected = true;
+    }
     key2Select.appendChild(option);
   }
 
@@ -16,6 +19,11 @@ document.addEventListener("DOMContentLoaded", function () {
       key2Select.value = items.hotKey2;
     }
   });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  const saveButton = document.getElementById("saveButton");
+  saveButton.addEventListener("click", saveSettings);
 });
 
 function saveSettings() {
