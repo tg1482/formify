@@ -1,4 +1,4 @@
-import { initDB, storeFormData, readAllData, searchData } from "./db.js";
+import { initDB, storeFormData, readAllData, searchData, deleteKey } from "./db.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension installed");
@@ -27,6 +27,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log("Filtered data", filteredData);
       sendResponse({ entries: filteredData });
     });
+    return true;
+  }
+
+  if (request.action === "deleteKey") {
+    const key = request.id;
+    deleteKey(key);
+    sendResponse({ status: "Data deleted" });
     return true;
   }
 });

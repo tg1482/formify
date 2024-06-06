@@ -151,3 +151,34 @@ export function searchData(keyword) {
     };
   });
 }
+
+export function deleteKey(key) {
+  const open_request = indexedDB.open(dbName);
+
+  open_request.onsuccess = function (event) {
+    const db = event.target.result;
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+    const delete_request = store.delete(key);
+
+    delete_request.onsuccess = function () {
+      console.log("Data deleted successfully for key:", key);
+    };
+
+    delete_request.onerror = function (event) {
+      console.error("Failed to delete data for key:", key, "error:", event.target.error);
+    };
+
+    transaction.oncomplete = function () {
+      console.log("Transaction completed: data deletion.");
+    };
+
+    transaction.onerror = function (event) {
+      console.error("Transaction failed on deletion:", event.target.error);
+    };
+  };
+
+  open_request.onerror = function (event) {
+    console.error("Database error on open during delete:", event.target.errorCode);
+  };
+}
