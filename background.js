@@ -1,4 +1,4 @@
-import { initDB, storeFormData, readAllData, searchData, deleteKey } from "./db.js";
+import { initDB, storeFormData, readAllData, searchData, deleteKey, deleteAllData } from "./db.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension installed");
@@ -34,6 +34,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const key = request.id;
     deleteKey(key);
     sendResponse({ status: "Data deleted" });
+    return true;
+  }
+
+  if (request.action === "updateHotkeys") {
+    chrome.storage.local.set({ hotKey1: request.hotKey1, hotKey2: request.hotKey2 }, function () {
+      console.log("Hotkeys updated successfully!");
+    });
+    return true;
+  }
+
+  if (request.action === "deleteAllData") {
+    deleteAllData();
+    sendResponse({ status: "All data deleted" });
     return true;
   }
 });

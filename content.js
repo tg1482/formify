@@ -43,6 +43,16 @@ function addCustomSidebar() {
   sidebar.appendChild(contentPrevious);
   fetchDataFromDB("all");
 
+  const deleteAllButton = document.createElement("button");
+  deleteAllButton.textContent = "Delete All ☠️";
+  deleteAllButton.className = "delete-all-button";
+  deleteAllButton.onclick = () => {
+    const container = document.getElementById("dataContainer");
+    container.innerHTML = ""; // Clear previous data
+    chrome.runtime.sendMessage({ action: "deleteAll" });
+  };
+  sidebar.appendChild(deleteAllButton);
+
   document.body.appendChild(sidebar);
 
   const resizeHandle = document.createElement("div");
@@ -219,7 +229,7 @@ function findLabel(input) {
       sibling = sibling.previousElementSibling;
     }
   }
-  return label ? label.innerText.trim() : "Unknown";
+  return label ? label.innerText.trim() : null;
 }
 
 function setupObserver() {

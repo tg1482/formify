@@ -183,6 +183,37 @@ export function deleteKey(key) {
   };
 }
 
+export function deleteAllData() {
+  const open_request = indexedDB.open(dbName);
+
+  open_request.onsuccess = function (event) {
+    const db = event.target.result;
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+    const clear_request = store.clear();
+
+    clear_request.onsuccess = function () {
+      console.log("All data deleted successfully.");
+    };
+
+    clear_request.onerror = function (event) {
+      console.error("Failed to delete all data:", event.target.error);
+    };
+
+    transaction.oncomplete = function () {
+      console.log("Transaction completed: all data deletion.");
+    };
+
+    transaction.onerror = function (event) {
+      console.error("Transaction failed on all data deletion:", event.target.error);
+    };
+  };
+
+  open_request.onerror = function (event) {
+    console.error("Database error on open during delete:", event.target.errorCode);
+  };
+}
+
 function toSentenceCase(str) {
   return str.replace(/(^\w|\s+\w)/g, function (match) {
     return match.toUpperCase();
