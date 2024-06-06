@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings Popup</title>
+    <style>
+      body {
+        padding: 20px;
+        font-family: "Arial", sans-serif;
+        background-color: #f4f4f4;
+        color: #333;
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+      .settings-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 300px;
+      }
+      .settings-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 20px 0;
+        width: 100%;
+      }
+      label {
+        margin-right: 10px;
+        font-weight: bold;
+      }
+      select {
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        width: 60%;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Settings</h1>
+    <div class="settings-container">
+      <div class="settings-row">
+        <label for="formify-key1">Hot Key 1:</label>
+        <select id="formify-key1">
+          <option value="Ctrl">Ctrl</option>
+          <option value="Alt">Alt / Option</option>
+          <option value="Shift">Shift</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="formify-key2">Hot Key 2:</label>
+        <select id="formify-key2"></select>
+      </div>
+      <button onclick="saveSettings()">Save</button>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -17,18 +17,75 @@ function addCustomSidebar() {
   header.style.fontSize = "24px";
   header.style.fontWeight = "bold";
   header.style.padding = "10px";
-  header.textContent = "Past Entries";
+  header.textContent = "Data Viewer";
   sidebar.appendChild(header);
 
-  const entriesContainer = document.createElement("div");
-  entriesContainer.id = "pastEntriesContainer";
-  entriesContainer.style.overflowY = "auto";
-  entriesContainer.style.height = "calc(100% - 50px)";
-  entriesContainer.style.padding = "10px";
-  entriesContainer.style.marginTop = "10px";
-  sidebar.appendChild(entriesContainer);
+  // Create tab controls
+  const tabContainer = document.createElement("div");
+  tabContainer.style.display = "flex";
+  tabContainer.style.justifyContent = "space-around";
+  tabContainer.style.marginBottom = "10px";
+
+  const tab1 = document.createElement("button");
+  tab1.textContent = "Previous Data";
+  tab1.style.flex = "1";
+  tab1.style.cursor = "pointer";
+  tab1.style.padding = "10px";
+  tab1.style.borderBottom = "3px solid transparent";
+
+  const tab2 = document.createElement("button");
+  tab2.textContent = "All Data";
+  tab2.style.flex = "1";
+  tab2.style.cursor = "pointer";
+  tab2.style.padding = "10px";
+  tab2.style.borderBottom = "3px solid transparent";
+
+  tabContainer.appendChild(tab1);
+  tabContainer.appendChild(tab2);
+  sidebar.appendChild(tabContainer);
+
+  // Create content containers for each tab
+  const contentPrevious = document.createElement("div");
+  contentPrevious.id = "contentPrevious";
+  contentPrevious.style.display = "none"; // Initially hidden
+  contentPrevious.style.overflowY = "auto";
+  contentPrevious.style.height = "calc(100% - 140px)";
+  contentPrevious.style.padding = "10px";
+
+  const contentAll = document.createElement("div");
+  contentAll.id = "contentAll";
+  contentAll.style.display = "none"; // Initially hidden
+  contentAll.style.overflowY = "auto";
+  contentAll.style.height = "calc(100% - 140px)";
+  contentAll.style.padding = "10px";
+
+  sidebar.appendChild(contentPrevious);
+  sidebar.appendChild(contentAll);
 
   document.body.appendChild(sidebar);
+
+  // Tab functionality
+  function switchTab(tab) {
+    if (tab === "previous") {
+      contentPrevious.style.display = "block";
+      contentAll.style.display = "none";
+      tab1.style.borderBottom = "3px solid blue";
+      tab2.style.borderBottom = "3px solid transparent";
+    } else {
+      contentPrevious.style.display = "none";
+      contentAll.style.display = "block";
+      tab1.style.borderBottom = "3px solid transparent";
+      tab2.style.borderBottom = "3px solid blue";
+      fetchDataFromDB("all");
+    }
+  }
+
+  // Event listeners for tabs
+  tab1.onclick = () => switchTab("previous");
+  tab2.onclick = () => switchTab("all");
+
+  // Default to show "Previous Data"
+  switchTab("previous");
 
   // Create a resize handle
   const resizeHandle = document.createElement("div");
@@ -40,7 +97,6 @@ function addCustomSidebar() {
   resizeHandle.style.cursor = "ew-resize";
   sidebar.appendChild(resizeHandle);
 
-  // Resize functionality
   let isResizing = false;
   let lastPageX;
 
@@ -63,19 +119,8 @@ function addCustomSidebar() {
     isResizing = false;
   });
 
-  //   document.addEventListener("input", handleInputChange);
   document.addEventListener("mouseup", handleTextSelection);
 }
-
-// function handleInputChange(event) {
-//   if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") {
-//     const value = event.target.value;
-//     if (value.length > 2) {
-//       // Threshold to avoid too frequent updates
-//       fetchDataFromDB(value);
-//     }
-//   }
-// }
 
 function handleTextSelection() {
   const selectedText = window.getSelection().toString().trim();
@@ -85,9 +130,20 @@ function handleTextSelection() {
 }
 
 function fetchDataFromDB(keyword) {
-  chrome.runtime.sendMessage({ action: "searchData", keyword: keyword }, (response) => {
+  let message;
+  let containerId = "contentPrevious";
+
+  if (keyword == "all") {
+    message = { action: "fetchData" };
+    containerId = "contentAll";
+  } else {
+    message = { action: "searchData", keyword: keyword };
+    containerId = "contentPrevious";
+  }
+
+  chrome.runtime.sendMessage(message, (response) => {
     console.log("Search results", response);
-    const container = document.getElementById("pastEntriesContainer");
+    const container = document.getElementById(containerId);
     container.innerHTML = ""; // Clear previous data
 
     response.entries?.forEach((entry) => {
