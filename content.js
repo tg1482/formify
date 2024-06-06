@@ -3,7 +3,7 @@ console.log("Formify content script loaded");
 function addCustomSidebar() {
   const sidebar = document.createElement("div");
   sidebar.id = "my-custom-sidebar";
-  sidebar.style.width = "400px";
+  sidebar.style.width = "500px";
   sidebar.style.height = "100%";
   sidebar.style.position = "fixed";
   sidebar.style.top = "0";
@@ -11,8 +11,57 @@ function addCustomSidebar() {
   sidebar.style.backgroundColor = "white";
   sidebar.style.boxShadow = "0 0 8px rgba(0,0,0,0.5)";
   sidebar.style.zIndex = "9999";
-  sidebar.innerHTML = "<h1>Form Data</h1><div id='formDataContainer'></div>";
+
+  const header = document.createElement("h1");
+  header.style.textAlign = "center";
+  header.style.fontSize = "24px";
+  header.style.fontWeight = "bold";
+  header.style.padding = "10px";
+  header.textContent = "Past Entries";
+  sidebar.appendChild(header);
+
+  const entriesContainer = document.createElement("div");
+  entriesContainer.id = "pastEntriesContainer";
+  entriesContainer.style.overflowY = "auto";
+  entriesContainer.style.height = "calc(100% - 50px)";
+  entriesContainer.style.padding = "10px";
+  entriesContainer.style.marginTop = "10px";
+  sidebar.appendChild(entriesContainer);
+
   document.body.appendChild(sidebar);
+
+  // Create a resize handle
+  const resizeHandle = document.createElement("div");
+  resizeHandle.style.width = "10px";
+  resizeHandle.style.height = "100%";
+  resizeHandle.style.position = "absolute";
+  resizeHandle.style.left = "0";
+  resizeHandle.style.top = "0";
+  resizeHandle.style.cursor = "ew-resize";
+  sidebar.appendChild(resizeHandle);
+
+  // Resize functionality
+  let isResizing = false;
+  let lastPageX;
+
+  resizeHandle.addEventListener("mousedown", function (e) {
+    isResizing = true;
+    lastPageX = e.pageX;
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (isResizing) {
+      const diff = e.pageX - lastPageX;
+      const newWidth = parseInt(window.getComputedStyle(sidebar).width, 10) - diff;
+      sidebar.style.width = `${newWidth}px`;
+      lastPageX = e.pageX;
+    }
+  });
+
+  document.addEventListener("mouseup", function (e) {
+    isResizing = false;
+  });
 
   //   document.addEventListener("input", handleInputChange);
   document.addEventListener("mouseup", handleTextSelection);
@@ -38,31 +87,35 @@ function handleTextSelection() {
 function fetchDataFromDB(keyword) {
   chrome.runtime.sendMessage({ action: "searchData", keyword: keyword }, (response) => {
     console.log("Search results", response);
-    const container = document.getElementById("formDataContainer");
+    const container = document.getElementById("pastEntriesContainer");
     container.innerHTML = ""; // Clear previous data
 
     response.entries?.forEach((entry) => {
       const div = document.createElement("div");
       div.style.border = "1px solid #ddd";
       div.style.borderRadius = "8px";
-      div.style.padding = "10px";
+      div.style.padding = "10px 10px";
       div.style.marginBottom = "10px";
+      div.style.marginLeft = "10px";
+      div.style.marginRight = "10px";
       div.style.backgroundColor = "#f9f9f9";
 
       const id = document.createElement("p");
-      id.innerHTML = `<strong>ID:</strong> ${entry.id}`;
+      id.style.textAlign = "center";
+      id.innerHTML = `<strong>${entry.id}</strong>`;
       div.appendChild(id);
 
       const value = document.createElement("p");
+      value.style.overflowWrap = "break-word";
       value.innerHTML = `<strong>Value:</strong> "${entry.data.value}"`;
       div.appendChild(value);
 
       const pageHeader = document.createElement("p");
-      pageHeader.innerHTML = `<strong>Page:</strong> ${entry.data.pageHeader}`;
+      pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
       div.appendChild(pageHeader);
 
       const createdAt = document.createElement("p");
-      createdAt.innerHTML = `<strong>Created At:</strong> ${entry.data.createdAt}`;
+      createdAt.innerHTML = `<i>${timeSince(entry.data.createdAt)}</i>`;
       div.appendChild(createdAt);
 
       const copyButton = document.createElement("button");
@@ -70,7 +123,10 @@ function fetchDataFromDB(keyword) {
       copyButton.style.marginTop = "10px";
       copyButton.onclick = () => {
         navigator.clipboard.writeText(entry.data.value).then(() => {
-          alert("Value copied to clipboard!");
+          copyButton.textContent = "✔️";
+          setTimeout(() => {
+            copyButton.textContent = "Copy Value";
+          }, 5000);
         });
       };
       div.appendChild(copyButton);
@@ -171,3 +227,29 @@ document.addEventListener("keydown", function (event) {
     }
   }
 });
+
+function timeSince(date) {
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  let interval = seconds / 31536000;
+
+  if (interval > 1) {
+    return Math.floor(interval) + " years ago";
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    return Math.floor(interval) + " months ago";
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return Math.floor(interval) + " days ago";
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    return Math.floor(interval) + " hours ago";
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return Math.floor(interval) + " minutes ago";
+  }
+  return Math.floor(seconds) + " seconds ago";
+}
