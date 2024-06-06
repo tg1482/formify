@@ -12,6 +12,12 @@
   border-radius: 8px;
 }
 
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
 #formify-sidebar h1 {
   text-align: center;
   font-size: 24px;
@@ -78,13 +84,12 @@
   overflow-wrap: break-word;
 }
 
-.data-entry .delete-button {
+.data-entry .copy-button {
   margin-top: 10px;
+}
+
+.data-entry .delete-button {
   position: absolute;
   top: 10px;
   right: 10px;
-}
-
-.data-entry .copy-button {
-  margin-top: 10px;
 }

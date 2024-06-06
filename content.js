@@ -9,6 +9,14 @@ function addCustomSidebar() {
   const sidebar = document.createElement("div");
   sidebar.id = "formify-sidebar";
 
+  const closeButton = document.createElement("button");
+  closeButton.textContent = "❌";
+  closeButton.className = "close-button";
+  closeButton.onclick = () => {
+    sidebar.remove(); // Remove the entry div from the DOM
+  };
+  sidebar.appendChild(closeButton);
+
   const header = document.createElement("h1");
   header.textContent = "Formify Data";
   sidebar.appendChild(header);
@@ -114,6 +122,19 @@ function dataEntryTemplate(entry, container) {
   value.innerHTML = `<strong>Value:</strong> "${entry.data.value}"`;
   div.appendChild(value);
 
+  const copyButton = document.createElement("button");
+  copyButton.textContent = "📋";
+  copyButton.className = "copy-button";
+  copyButton.onclick = () => {
+    navigator.clipboard.writeText(entry.data.value).then(() => {
+      copyButton.textContent = "✅";
+      setTimeout(() => {
+        copyButton.textContent = "📋";
+      }, 2000);
+    });
+  };
+  div.appendChild(copyButton);
+
   const pageHeader = document.createElement("p");
   pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
   div.appendChild(pageHeader);
@@ -122,21 +143,8 @@ function dataEntryTemplate(entry, container) {
   createdAt.innerHTML = `<strong>Updated:</strong> <i>${timeSince(entry.data.createdAt)}</i>`;
   div.appendChild(createdAt);
 
-  const copyButton = document.createElement("button");
-  copyButton.textContent = "Copy Value";
-  copyButton.className = "copy-button";
-  copyButton.onclick = () => {
-    navigator.clipboard.writeText(entry.data.value).then(() => {
-      copyButton.textContent = "✔️";
-      setTimeout(() => {
-        copyButton.textContent = "Copy Value";
-      }, 2000);
-    });
-  };
-  div.appendChild(copyButton);
-
   const deleteButton = document.createElement("button");
-  deleteButton.textContent = "Delete";
+  deleteButton.textContent = "🗑️";
   deleteButton.className = "delete-button";
   deleteButton.onclick = () => {
     div.remove(); // Remove the entry div from the DOM
@@ -233,22 +241,6 @@ function saveData(entries) {
   chrome.runtime.sendMessage({ action: "saveData", entries });
 }
 
-function checkHotkeys(event, hotKey1, hotKey2) {
-  console.log("Event", event);
-  const key1 = hotKey1.toLowerCase();
-  const key2 = hotKey2.toLowerCase();
-
-  if (key1 === "ctrl" && !event.ctrlKey) return false;
-  if (key1 === "shift" && !event.shiftKey) return false;
-  if (key1 === "alt" && !event.altKey) return false;
-
-  // Check if the correct combination of keys is pressed
-  if (event.key.toLowerCase() === key2) {
-    return true;
-  }
-  return false;
-}
-
 function toggleSideBar() {
   const sidebar = document.getElementById("formify-sidebar");
   if (sidebar) {
@@ -275,6 +267,22 @@ document.addEventListener("keydown", function (event) {
     }
   });
 });
+
+function checkHotkeys(event, hotKey1, hotKey2) {
+  console.log("Event", event);
+  const key1 = hotKey1.toLowerCase();
+  const key2 = hotKey2.toLowerCase();
+
+  if (key1 === "ctrl" && !event.ctrlKey) return false;
+  if (key1 === "shift" && !event.shiftKey) return false;
+  if (key1 === "alt" && !event.altKey) return false;
+
+  // Check if the correct combination of keys is pressed
+  if (event.key.toLowerCase() === key2) {
+    return true;
+  }
+  return false;
+}
 
 function timeSince(date) {
   const seconds = Math.floor((new Date() - new Date(date)) / 1000);

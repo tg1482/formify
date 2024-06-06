@@ -35,7 +35,7 @@ export function storeFormData(data) {
 
     // Iterate through each key-value pair in the data object
     for (const [key, value] of Object.entries(data)) {
-      const update_request = store.put({ id: key, data: value });
+      const update_request = store.put({ id: cleanString(key), data: value });
 
       update_request.onsuccess = function () {
         console.log("Form data stored for key:", key, "value:", value);
@@ -181,4 +181,14 @@ export function deleteKey(key) {
   open_request.onerror = function (event) {
     console.error("Database error on open during delete:", event.target.errorCode);
   };
+}
+
+function toSentenceCase(str) {
+  return str.replace(/(^\w|\s+\w)/g, function (match) {
+    return match.toUpperCase();
+  });
+}
+
+function cleanString(str) {
+  return toSentenceCase(str.trim().replace(/^[^\w]+|[^\w]+$/g, ""));
 }
