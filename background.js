@@ -18,10 +18,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.sidePanel.open({ windowId: tab.windowId });
     isSidebarOpen = true;
   }
-  if (info.menuItemId === "closeSidePanel") {
-    chrome.sidePanel.close();
-    isSidebarOpen = false;
-  }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -34,9 +30,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "toggleSidebar") {
     if (isSidebarOpen) {
-      chrome.sidePanel.close();
+      chrome.runtime.sendMessage({ action: "closeSidebar" });
+      isSidebarOpen = false;
     } else {
       chrome.sidePanel.open({ tabId: sender.tab.id });
+      isSidebarOpen = true;
     }
     return true;
   }

@@ -2,6 +2,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === "displayData") {
     updateSidebarUI(message.entries, message.keyword);
   }
+  if (message.action === "closeSidebar") {
+    window.close();
+  }
 });
 
 function addCustomSidebar() {
