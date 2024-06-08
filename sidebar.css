@@ -89,7 +89,10 @@
 }
 
 .data-entry .copy-button {
-  margin-top: 0; /* Adjust margin as needed */
+  margin-top: 0;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
 }
 
 .data-entry div {

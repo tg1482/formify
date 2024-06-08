@@ -33,7 +33,6 @@ function toggleSideBar() {
 function inputListeningInit() {
   const url = window.location.href;
   const pageHeader = document.title;
-  const createdAt = new Date().toISOString();
 
   document.querySelectorAll("input, textarea").forEach((input) => {
     // Attach blur listener to each input/textarea
@@ -42,7 +41,7 @@ function inputListeningInit() {
 
       // Prepare data object
       const value = input.value;
-      const data = { value, url, pageHeader, createdAt };
+      const data = { value, url, pageHeader, createdAt: new Date().toISOString() };
 
       // Optionally, send the data somewhere, like to saveData function
       if (key && value) {

@@ -59,6 +59,7 @@ function addCustomSidebar() {
     chrome.runtime.sendMessage({ action: "deleteAll" });
   };
   sidebar.appendChild(deleteAllButton);
+
   document.body.appendChild(sidebar);
 }
 
@@ -91,9 +92,11 @@ function dataEntryTemplate(entry, container) {
   const id = document.createElement("h3");
   id.innerHTML = `<strong>${entry.id}</strong>`;
   div.appendChild(id);
+
   const valueContainer = document.createElement("div");
   valueContainer.style.display = "flex";
   valueContainer.style.alignItems = "center";
+
   const copyButton = document.createElement("button");
   copyButton.textContent = "📋";
   copyButton.className = "copy-button";
@@ -104,19 +107,23 @@ function dataEntryTemplate(entry, container) {
     });
   };
   valueContainer.appendChild(copyButton);
+
   const value = document.createElement("p");
   value.innerHTML = `"${entry.data.value}"`;
   value.style.marginLeft = "10px";
   valueContainer.appendChild(value);
   div.appendChild(valueContainer);
+
   const pageHeader = document.createElement("p");
   pageHeader.style.fontSize = "12px";
   pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
   div.appendChild(pageHeader);
+
   const createdAt = document.createElement("p");
   createdAt.style.fontSize = "12px";
   createdAt.innerHTML = `<strong>Updated:</strong> <i>${timeSince(entry.data.createdAt)}</i>`;
   div.appendChild(createdAt);
+
   const deleteButton = document.createElement("button");
   deleteButton.textContent = "🗑️";
   deleteButton.className = "delete-button";
