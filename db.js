@@ -20,37 +20,44 @@ export function initDB() {
 }
 
 export function storeFormData(data) {
-  const open_request = indexedDB.open(dbName);
+  return new Promise((resolve, reject) => {
+    const open_request = indexedDB.open(dbName);
 
-  open_request.onsuccess = function (event) {
-    const db = event.target.result;
+    open_request.onsuccess = function (event) {
+      const db = event.target.result;
 
-    // Open a transaction as soon as the database is open
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
+      // Open a transaction as soon as the database is open
+      const transaction = db.transaction(storeName, "readwrite");
+      const store = transaction.objectStore(storeName);
 
-    // Iterate through each key-value pair in the data object
-    for (const [key, value] of Object.entries(data)) {
-      const update_request = store.put({ id: cleanString(key), data: value });
+      // Iterate through each key-value pair in the data object
+      for (const [key, value] of Object.entries(data)) {
+        const update_request = store.put({ id: cleanString(key), data: value });
 
-      update_request.onsuccess = function () {};
+        update_request.onsuccess = function () {};
 
-      update_request.onerror = function (event) {
-        console.error("Failed to store form data for key:", key, "error:", event.target.error);
+        update_request.onerror = function (event) {
+          console.error("Failed to store form data for key:", key, "error:", event.target.error);
+          reject(event.target.error);
+        };
+      }
+
+      // Listen to transaction complete to confirm data is written
+      transaction.oncomplete = function () {
+        resolve();
       };
-    }
 
-    // Listen to transaction complete to confirm data is written
-    transaction.oncomplete = function () {};
-
-    transaction.onerror = function (event) {
-      console.error("Transaction failed: ", event.target.error);
+      transaction.onerror = function (event) {
+        console.error("Transaction failed: ", event.target.error);
+        reject(event.target.error);
+      };
     };
-  };
 
-  open_request.onerror = function (event) {
-    console.error("Database error: " + event.target.errorCode);
-  };
+    open_request.onerror = function (event) {
+      console.error("Database error: " + event.target.errorCode);
+      reject(event.target.errorCode);
+    };
+  });
 }
 
 export function readData(key) {

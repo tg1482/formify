@@ -5,6 +5,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === "closeSidebar") {
     window.close();
   }
+  if (message.action === "refreshData") {
+    const searchbar = document.querySelector(".search-bar-container input");
+    if (searchbar.value === "") {
+      fetchDataFromDB("all");
+    } else {
+      fetchDataFromDB(searchbar.value);
+    }
+  }
 });
 
 function addCustomSidebar() {
