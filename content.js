@@ -86,19 +86,12 @@ if (document.readyState === "loading") {
   }, 5000);
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("keydown", function (event) {
   chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
-    if (chrome.runtime.lastError) {
-      console.error(chrome.runtime.lastError);
-      return;
-    }
-
     if (items.hotKey1 && items.hotKey2) {
-      document.addEventListener("keydown", function (event) {
-        if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
-          toggleSideBar();
-        }
-      });
+      if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
+        toggleSideBar();
+      }
     }
   });
 });
