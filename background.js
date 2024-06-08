@@ -42,7 +42,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "saveData") {
     storeFormData(request.entries).then(() => {
       chrome.runtime.sendMessage({ action: "refreshData" });
-      sendResponse({ status: "Data stored" });
     });
     return true; // To indicate asynchronous response
   }
