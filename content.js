@@ -76,21 +76,25 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     inputListeningInit();
     setupObserver();
+    setupHotkeyListener();
   });
 } else {
   inputListeningInit();
   setupObserver();
+  setupHotkeyListener();
 }
 
-document.addEventListener("keydown", function (event) {
-  chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
-    if (items.hotKey1 && items.hotKey2) {
-      if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
-        toggleSideBar();
+function setupHotkeyListener() {
+  document.addEventListener("keydown", function (event) {
+    chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
+      if (items.hotKey1 && items.hotKey2) {
+        if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
+          toggleSideBar();
+        }
       }
-    }
+    });
   });
-});
+}
 
 document.addEventListener("mouseup", handleTextSelection);
 
