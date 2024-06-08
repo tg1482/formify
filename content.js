@@ -104,7 +104,10 @@ function setupObserver() {
     mutations.forEach((mutation) => {
       if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
         const hasInputOrTextarea = Array.from(mutation.addedNodes).some(
-          (node) => node.nodeName === "INPUT" || node.nodeName === "TEXTAREA" || node.querySelectorAll("input, textarea").length > 0
+          (node) =>
+            node.nodeName === "INPUT" ||
+            node.nodeName === "TEXTAREA" ||
+            (node.nodeType === Node.ELEMENT_NODE && node.querySelectorAll("input, textarea").length > 0)
         );
         if (hasInputOrTextarea) {
           inputListeningInit();
