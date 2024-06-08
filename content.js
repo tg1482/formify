@@ -74,16 +74,12 @@ function findLabel(input) {
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
-    setTimeout(() => {
-      inputListeningInit();
-      setupObserver();
-    }, 5000);
-  });
-} else {
-  setTimeout(() => {
     inputListeningInit();
     setupObserver();
-  }, 5000);
+  });
+} else {
+  inputListeningInit();
+  setupObserver();
 }
 
 document.addEventListener("keydown", function (event) {
@@ -104,12 +100,10 @@ function setupObserver() {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-        // ensure that the added node is not my custom sidebar
-        let relatedToSidebar =
-          Array.from(mutation.addedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formie-sidebar")) ||
-          Array.from(mutation.removedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formie-sidebar"));
-
-        if (!relatedToSidebar) {
+        const hasInputOrTextarea = Array.from(mutation.addedNodes).some(
+          (node) => node.nodeName === "INPUT" || node.nodeName === "TEXTAREA" || node.querySelectorAll("input, textarea").length > 0
+        );
+        if (hasInputOrTextarea) {
           inputListeningInit();
         }
       }
