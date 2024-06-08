@@ -1,14 +1,36 @@
-document.addEventListener("mouseup", handleTextSelection);
+// Messaging Background worker
 
 function handleTextSelection() {
   const selectedText = window.getSelection().toString().trim();
 
   if (selectedText.length > 2) {
-    chrome.runtime.sendMessage({ action: "searchData", keyword: selectedText });
+    try {
+      chrome.runtime.sendMessage({ action: "searchData", keyword: selectedText });
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   }
 }
 
-function init() {
+function saveData(entries) {
+  try {
+    chrome.runtime.sendMessage({ action: "saveData", entries });
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+}
+
+function toggleSideBar() {
+  try {
+    chrome.runtime.sendMessage({ action: "toggleSidebar" });
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+}
+
+// Function to listen to input/textarea blur events
+
+function inputListeningInit() {
   const url = window.location.href;
   const pageHeader = document.title;
   const createdAt = new Date().toISOString();
@@ -48,6 +70,43 @@ function findLabel(input) {
   return label ? label.innerText.trim() : null;
 }
 
+// Add listeners to document
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+      inputListeningInit();
+      setupObserver();
+    }, 5000);
+  });
+} else {
+  setTimeout(() => {
+    inputListeningInit();
+    setupObserver();
+  }, 5000);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
+    if (chrome.runtime.lastError) {
+      console.error(chrome.runtime.lastError);
+      return;
+    }
+
+    if (items.hotKey1 && items.hotKey2) {
+      document.addEventListener("keydown", function (event) {
+        if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
+          toggleSideBar();
+        }
+      });
+    }
+  });
+});
+
+document.addEventListener("mouseup", handleTextSelection);
+
+// Helper functions
+
 function setupObserver() {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
@@ -58,7 +117,7 @@ function setupObserver() {
           Array.from(mutation.removedNodes).some((node) => node.nodeType === Node.ELEMENT_NODE && node.closest("#formie-sidebar"));
 
         if (!relatedToSidebar) {
-          init();
+          inputListeningInit();
         }
       }
     });
@@ -69,44 +128,6 @@ function setupObserver() {
     subtree: true,
   });
 }
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
-    setTimeout(() => {
-      init();
-      setupObserver();
-    }, 5000);
-  });
-} else {
-  setTimeout(() => {
-    init();
-    setupObserver();
-  }, 5000);
-}
-
-function saveData(entries) {
-  chrome.runtime.sendMessage({ action: "saveData", entries });
-}
-
-function toggleSideBar() {
-  chrome.runtime.sendMessage({ action: "toggleSidebar" });
-}
-
-document.addEventListener("keydown", function (event) {
-  // Fetch hotkeys from storage only once or when needed, not on every keydown
-  chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
-    if (chrome.runtime.lastError) {
-      return;
-    }
-
-    if (items.hotKey1 && items.hotKey2) {
-      // Check if the fetched hotkeys are pressed
-      if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
-        toggleSideBar();
-      }
-    }
-  });
-});
 
 function checkHotkeys(event, hotKey1, hotKey2) {
   const key1 = hotKey1.toLowerCase();
