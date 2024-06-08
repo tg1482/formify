@@ -2,12 +2,16 @@
   width: 100%;
   height: 100%;
   color: black;
+  background-color: white;
 }
 
 .close-button {
   position: absolute;
   top: 10px;
   right: 10px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
 }
 
 /* at the bottom center */
@@ -16,6 +20,9 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
 }
 
 #formie-sidebar h1 {
@@ -69,7 +76,9 @@
   padding: 10px;
   margin: 10px;
   background-color: #f9f9f9;
-  position: relative; /* For absolute positioning of the delete button */
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .data-entry h3 {
@@ -91,12 +100,17 @@
 
 .data-entry p {
   text-align: left;
-  overflow-wrap: break-word;
-  margin: 0; /* Remove default margin */
+  word-wrap: break-word;
+  hyphens: auto;
+  margin: 0;
+  white-space: normal;
 }
 
 .data-entry .delete-button {
   position: absolute;
   top: 10px;
   right: 10px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
 }

@@ -19,7 +19,7 @@ function addCustomSidebar() {
   const closeButton = document.createElement("button");
   closeButton.textContent = "❌";
   closeButton.className = "close-button";
-  closeButton.onclick = () => sidebar.remove();
+  closeButton.onclick = () => window.close();
   sidebar.appendChild(closeButton);
 
   const header = document.createElement("h1");
