@@ -8,6 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
   console.log("Extension installed");
   initDB();
+  initHotKeys();
 });
 
 let isSidebarOpen = false;
@@ -81,3 +82,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   return false;
 });
+
+function initHotKeys() {
+  chrome.storage.local.get(["hotKey1", "hotKey2"], function (result) {
+    if (result.hotKey1 === undefined || result.hotKey2 === undefined) {
+      chrome.storage.local.set({ hotKey1: "Ctrl", hotKey2: "O" }, function () {
+        if (chrome.runtime.lastError) {
+          console.error("Error setting hotkeys:", chrome.runtime.lastError);
+        } else {
+          console.log("Default hotkeys set successfully");
+        }
+      });
+    }
+  });
+}
