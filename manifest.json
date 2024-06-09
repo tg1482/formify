@@ -3,7 +3,7 @@
   "name": "Formie",
   "version": "1.1",
   "description": "Copilot for filling forms",
-  "permissions": ["storage", "activeTab", "contextMenus", "sidePanel"],
+  "permissions": ["storage", "contextMenus", "sidePanel"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
