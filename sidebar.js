@@ -1,9 +1,11 @@
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === "displayData") {
     updateSidebarUI(message.entries, message.keyword);
+    return true;
   }
   if (message.action === "closeSidebar") {
     window.close();
+    return true;
   }
   if (message.action === "refreshData") {
     const searchbar = document.querySelector(".search-bar-container input");
@@ -12,7 +14,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     } else {
       fetchDataFromDB(searchbar.value);
     }
+    return true;
   }
+  return false;
 });
 
 function addCustomSidebar() {
@@ -68,8 +72,8 @@ function fetchDataFromDB(keyword) {
   chrome.runtime.sendMessage(message, (response) => {
     const container = document.getElementById("dataContainer");
     container.innerHTML = "";
-    response.entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
-    response.entries.forEach((entry) => dataEntryTemplate(entry, container));
+    response?.entries?.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
+    response?.entries?.forEach((entry) => dataEntryTemplate(entry, container));
   });
 }
 
