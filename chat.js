@@ -6,10 +6,24 @@ const initProgressCallback = (initProgress) => {
 };
 const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
 
-const engine = await CreateExtensionServiceWorkerMLCEngine(
-  selectedModel,
-  { initProgressCallback: initProgressCallback } // engineConfig
-);
+let engine;
+let chatReady = false;
+
+function initializeEngine() {
+  CreateExtensionServiceWorkerMLCEngine(selectedModel, { initProgressCallback })
+    .then((eng) => {
+      engine = eng;
+      console.log("Engine is ready");
+      chatReady = true;
+    })
+    .catch((error) => {
+      console.error("Failed to initialize the engine", error);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  initializeEngine();
+});
 
 export function showChat() {
   const container = document.getElementById("contentContainer");
@@ -54,6 +68,10 @@ export function showChat() {
 
   // Event listener for send button
   sendButton.onclick = async () => {
+    if (!chatReady) {
+      console.error("Chat is not ready");
+      return;
+    }
     const userText = userInput.value;
     if (userText.trim()) {
       addMessage("user", userText);
