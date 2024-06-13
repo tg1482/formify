@@ -1,3 +1,5 @@
+import { showChat } from "./chat.js";
+
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === "displayData") {
     updateSidebarUI(message.entries, message.keyword);
@@ -75,68 +77,6 @@ function setActiveTab(activeTab) {
     tab.classList.remove("active");
   });
   activeTab.classList.add("active");
-}
-
-function showChat() {
-  const container = document.getElementById("contentContainer");
-  container.innerHTML = ""; // Clear previous content
-
-  // Create chat container
-  const chatContainer = document.createElement("div");
-  chatContainer.className = "chat-container";
-  container.appendChild(chatContainer);
-
-  // Create message display area
-  const messageDisplay = document.createElement("div");
-  messageDisplay.className = "message-display";
-  chatContainer.appendChild(messageDisplay);
-
-  // Create user input area
-  const inputArea = document.createElement("div");
-  inputArea.className = "input-area";
-  chatContainer.appendChild(inputArea);
-
-  // Create text input
-  const userInput = document.createElement("input");
-  userInput.type = "text";
-  userInput.placeholder = "Type your message...";
-  userInput.className = "user-input";
-  inputArea.appendChild(userInput);
-
-  // Create send button
-  const sendButton = document.createElement("button");
-  sendButton.textContent = "Send";
-  sendButton.className = "send-button";
-  inputArea.appendChild(sendButton);
-
-  // Function to add messages to display
-  function addMessage(author, text) {
-    const messageElement = document.createElement("div");
-    messageElement.className = `message ${author}`;
-    messageElement.textContent = text;
-    messageDisplay.appendChild(messageElement);
-    messageDisplay.scrollTop = messageDisplay.scrollHeight; // Scroll to bottom
-  }
-
-  // Event listener for send button
-  sendButton.onclick = () => {
-    const userText = userInput.value;
-    if (userText.trim()) {
-      addMessage("user", userText);
-      addMessage("ai", "Message from AI"); // AI response
-      userInput.value = ""; // Clear input after sending
-    }
-  };
-
-  // Event listener for Enter key
-  userInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      sendButton.click();
-    }
-  });
-
-  // Initial AI message
-  addMessage("ai", "Message from AI");
 }
 
 function showHistory() {
