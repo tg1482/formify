@@ -34,12 +34,115 @@ function addCustomSidebar() {
   closeButton.onclick = () => window.close();
   sidebar.appendChild(closeButton);
 
-  const header = document.createElement("h1");
-  header.textContent = "Formie Data";
-  sidebar.appendChild(header);
+  // Create tabs container
+  const tabsContainer = document.createElement("div");
+  tabsContainer.className = "tabs-container";
 
-  const contentPrevious = document.createElement("div");
-  contentPrevious.id = "contentPrevious";
+  const tabChat = document.createElement("button");
+  tabChat.textContent = "Chat";
+  tabChat.className = "tab";
+  tabChat.onclick = () => {
+    setActiveTab(tabChat);
+    showChat();
+  };
+  tabsContainer.appendChild(tabChat);
+
+  const tabHistory = document.createElement("button");
+  tabHistory.textContent = "Data History";
+  tabHistory.className = "tab";
+  tabHistory.onclick = () => {
+    setActiveTab(tabHistory);
+    showHistory();
+  };
+  tabsContainer.appendChild(tabHistory);
+
+  sidebar.appendChild(tabsContainer);
+
+  const contentContainer = document.createElement("div");
+  contentContainer.id = "contentContainer";
+  sidebar.appendChild(contentContainer);
+
+  document.body.appendChild(sidebar);
+
+  // Initially load history view
+  setActiveTab(tabHistory);
+  showHistory();
+}
+
+function setActiveTab(activeTab) {
+  const tabs = document.querySelectorAll(".tab");
+  tabs.forEach((tab) => {
+    tab.classList.remove("active");
+  });
+  activeTab.classList.add("active");
+}
+
+function showChat() {
+  const container = document.getElementById("contentContainer");
+  container.innerHTML = ""; // Clear previous content
+
+  // Create chat container
+  const chatContainer = document.createElement("div");
+  chatContainer.className = "chat-container";
+  container.appendChild(chatContainer);
+
+  // Create message display area
+  const messageDisplay = document.createElement("div");
+  messageDisplay.className = "message-display";
+  chatContainer.appendChild(messageDisplay);
+
+  // Create user input area
+  const inputArea = document.createElement("div");
+  inputArea.className = "input-area";
+  chatContainer.appendChild(inputArea);
+
+  // Create text input
+  const userInput = document.createElement("input");
+  userInput.type = "text";
+  userInput.placeholder = "Type your message...";
+  userInput.className = "user-input";
+  inputArea.appendChild(userInput);
+
+  // Create send button
+  const sendButton = document.createElement("button");
+  sendButton.textContent = "Send";
+  sendButton.className = "send-button";
+  inputArea.appendChild(sendButton);
+
+  // Function to add messages to display
+  function addMessage(author, text) {
+    const messageElement = document.createElement("div");
+    messageElement.className = `message ${author}`;
+    messageElement.textContent = text;
+    messageDisplay.appendChild(messageElement);
+    messageDisplay.scrollTop = messageDisplay.scrollHeight; // Scroll to bottom
+  }
+
+  // Event listener for send button
+  sendButton.onclick = () => {
+    const userText = userInput.value;
+    if (userText.trim()) {
+      addMessage("user", userText);
+      addMessage("ai", "Message from AI"); // AI response
+      userInput.value = ""; // Clear input after sending
+    }
+  };
+
+  // Event listener for Enter key
+  userInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      sendButton.click();
+    }
+  });
+
+  // Initial AI message
+  addMessage("ai", "Message from AI");
+}
+
+function showHistory() {
+  console.log("showHistory");
+  const container = document.getElementById("contentContainer");
+  container.innerHTML = "";
   const searchBarContainer = document.createElement("div");
   searchBarContainer.className = "search-bar-container";
   const searchBar = document.createElement("input");
@@ -47,12 +150,11 @@ function addCustomSidebar() {
   searchBar.placeholder = "Search...";
   searchBar.oninput = (e) => fetchDataFromDB(e.target.value || "all");
   searchBarContainer.appendChild(searchBar);
-  contentPrevious.appendChild(searchBarContainer);
+  container.appendChild(searchBarContainer);
 
   const dataContainer = document.createElement("div");
   dataContainer.id = "dataContainer";
-  contentPrevious.appendChild(dataContainer);
-  sidebar.appendChild(contentPrevious);
+  container.appendChild(dataContainer);
   fetchDataFromDB("all");
 
   const deleteAllButton = document.createElement("button");
@@ -62,9 +164,7 @@ function addCustomSidebar() {
     document.getElementById("dataContainer").innerHTML = "";
     chrome.runtime.sendMessage({ action: "deleteAll" });
   };
-  sidebar.appendChild(deleteAllButton);
-
-  document.body.appendChild(sidebar);
+  container.appendChild(deleteAllButton);
 }
 
 function fetchDataFromDB(keyword) {
@@ -165,4 +265,7 @@ function timeSince(date) {
   return Math.floor(seconds) + " seconds ago";
 }
 
-addCustomSidebar();
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("DOM loaded");
+  addCustomSidebar();
+});
