@@ -1,13 +1,22 @@
 import { CreateExtensionServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
 
+let engine;
+let chatReady = false;
+let userInput;
+const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
+
 // Callback function to update model loading progress
 const initProgressCallback = (initProgress) => {
   console.log(initProgress);
+  const text = initProgress.text;
+  const match = text.match(/(\d+)\/(\d+)/);
+  if (match) {
+    const loaded = parseInt(match[1], 10);
+    const total = parseInt(match[2], 10);
+    const percentage = Math.round((loaded / total) * 100);
+    userInput.placeholder = `Loading model... ${percentage}%`;
+  }
 };
-const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
-
-let engine;
-let chatReady = false;
 
 function initializeEngine() {
   CreateExtensionServiceWorkerMLCEngine(selectedModel, { initProgressCallback })
@@ -15,9 +24,12 @@ function initializeEngine() {
       engine = eng;
       console.log("Engine is ready");
       chatReady = true;
+      userInput.disabled = false;
+      userInput.placeholder = "Type a message...";
     })
     .catch((error) => {
       console.error("Failed to initialize the engine", error);
+      userInput.placeholder = "Failed to load model"; // Show error in placeholder
     });
 }
 
@@ -45,10 +57,11 @@ export function showChat() {
   chatContainer.appendChild(inputArea);
 
   // Create text input
-  const userInput = document.createElement("input");
+  userInput = document.createElement("input");
   userInput.type = "text";
-  userInput.placeholder = "Type your message...";
+  userInput.placeholder = "Type a message...";
   userInput.className = "user-input";
+  userInput.disabled = true; // Initially disable input until engine is ready
   inputArea.appendChild(userInput);
 
   // Create send button
@@ -76,9 +89,15 @@ export function showChat() {
     if (userText.trim()) {
       addMessage("user", userText);
       const messages = [
-        { role: "system", content: "You are a helpful AI assistant." },
+        {
+          role: "system",
+          content:
+            "You are a helpful AI assistant for a google chrome extension called Formie. You help people fill out forms faster by using pre-saved data.",
+        },
         { role: "user", content: userText },
       ];
+
+      addMessage("ai", "Typing..."); // Show typing message
 
       const reply = await engine.chat.completions.create({
         messages,
@@ -90,7 +109,7 @@ export function showChat() {
         fullReply += chunk.choices[0].delta.content;
       }
 
-      addMessage("ai", fullReply);
+      messageDisplay.lastChild.textContent = fullReply; // Replace "Typing..." with actual reply
       userInput.value = ""; // Clear input after sending
     }
   };
