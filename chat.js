@@ -7,6 +7,10 @@ let userInput;
 let messagesLoaded = false;
 const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
 
+function hasMessageAndAuthorClasses(element, author) {
+  return element.classList.contains("message") && element.classList.contains(author);
+}
+
 // Callback function to update model loading progress
 const initProgressCallback = (initProgress) => {
   console.log(initProgress);
@@ -70,13 +74,32 @@ export function showChat() {
   inputArea.appendChild(sendButton);
 
   // Function to add messages to display
-  function addMessage(author, text, saveToDB = true) {
-    const messageElement = document.createElement("div");
-    messageElement.className = `message ${author}`;
-    messageElement.textContent = text;
-    messageDisplay.appendChild(messageElement);
-    messageDisplay.scrollTop = messageDisplay.scrollHeight; // Scroll to bottom
-    if (saveToDB) {
+  // function addMessage(author, text, saveToDB = true) {
+  //   const messageElement = document.createElement("div");
+  //   messageElement.className = `message ${author}`;
+  //   messageElement.textContent = text;
+  //   messageDisplay.appendChild(messageElement);
+  //   messageDisplay.scrollTop = messageDisplay.scrollHeight; // Scroll to bottom
+  //   if (saveToDB) {
+  //     saveMessage({ author, text });
+  //   }
+  // }
+
+  function manageMessage(author, text, { toDisplay = false, toSave = false, toAppend = false }) {
+    if (toAppend && messageDisplay.lastChild && hasMessageAndAuthorClasses(messageDisplay.lastChild, author)) {
+      // Append text to the last message if it's from the same author
+      messageDisplay.lastChild.textContent += text;
+    } else if (toDisplay) {
+      // Create a new message element
+      const messageElement = document.createElement("div");
+      messageElement.className = `message ${author}`;
+      messageElement.textContent = text;
+      messageDisplay.appendChild(messageElement);
+      messageDisplay.scrollTop = messageDisplay.scrollHeight;
+    }
+
+    // Save the message to the database if required
+    if (toSave) {
       saveMessage({ author, text });
     }
   }
@@ -89,7 +112,7 @@ export function showChat() {
     }
     const userText = userInput.value;
     if (userText.trim()) {
-      addMessage("user", userText);
+      manageMessage("user", userText, { toDisplay: true, toSave: true });
       const messages = [
         {
           role: "system",
@@ -99,7 +122,7 @@ export function showChat() {
         { role: "user", content: userText },
       ];
 
-      addMessage("ai", "Typing...", false); // Show typing message
+      manageMessage("ai", "Typing...", { toDisplay: true });
 
       const reply = await engine.chat.completions.create({
         messages,
@@ -107,14 +130,24 @@ export function showChat() {
       });
 
       let fullReply = "";
+      let typingMessageCleared = false;
       for await (const chunk of reply) {
-        const chunkMessage = chunk.choices[0].message.content;
-        fullReply += chunkMessage;
+        // Clear the "Typing..." message
+        if (!typingMessageCleared && messageDisplay.lastChild && hasMessageAndAuthorClasses(messageDisplay.lastChild, "ai")) {
+          messageDisplay.removeChild(messageDisplay.lastChild); // Remove the element entirely
+          typingMessageCleared = true;
+        }
+
+        const chunkMessage = chunk.choices[0].delta.content;
+        if (chunk.choices[0].finish_reason) {
+          manageMessage("ai", fullReply, { toSave: true });
+          break;
+        } else {
+          fullReply += chunkMessage;
+          manageMessage("ai", chunkMessage, { toDisplay: true, toAppend: true });
+        }
       }
 
-      // remove the typing message which is the last message
-      messageDisplay.removeChild(messageDisplay.lastChild);
-      addMessage("ai", fullReply, false);
       userInput.value = "";
     }
   };
@@ -132,7 +165,7 @@ export function showChat() {
     }
     getMessages().then((messages) => {
       messages.forEach((message) => {
-        addMessage(message.author, message.text, false);
+        manageMessage(message.author, message.text, { toDisplay: true });
       });
       messagesLoaded = true; // Set flag to true after messages are loaded
     });
@@ -159,5 +192,5 @@ export function showChat() {
 
   loadMessages();
   // Initial AI message
-  addMessage("ai", "Welcome to Formie Chat", false);
+  manageMessage("ai", "Welcome to Formie Chat", { toDisplay: true });
 }
