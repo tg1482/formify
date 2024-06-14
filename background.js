@@ -20,7 +20,6 @@ chrome.runtime.onInstalled.addListener(() => {
     title: "Open side panel",
     contexts: ["all"],
   });
-  console.log("Extension installed");
   initDB();
   initHotKeys();
 });

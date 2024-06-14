@@ -1,14 +1,18 @@
 const dbName = "FormDataDB";
-const storeName = "entries";
+const dataStoreName = "entries";
+const chatStoreName = "chat";
 
 export function initDB() {
   let db;
-  const request = indexedDB.open(dbName, 1);
+  const request = indexedDB.open(dbName, 2);
 
   request.onupgradeneeded = function (event) {
     db = event.target.result;
-    if (!db.objectStoreNames.contains(storeName)) {
-      db.createObjectStore(storeName, { keyPath: "id" });
+    if (!db.objectStoreNames.contains(dataStoreName)) {
+      db.createObjectStore(dataStoreName, { keyPath: "id" });
+    }
+    if (!db.objectStoreNames.contains(chatStoreName)) {
+      db.createObjectStore(chatStoreName, { keyPath: "id" });
     }
   };
 
@@ -27,8 +31,8 @@ export function storeFormData(data) {
       const db = event.target.result;
 
       // Open a transaction as soon as the database is open
-      const transaction = db.transaction(storeName, "readwrite");
-      const store = transaction.objectStore(storeName);
+      const transaction = db.transaction(dataStoreName, "readwrite");
+      const store = transaction.objectStore(dataStoreName);
 
       // Iterate through each key-value pair in the data object
       for (const [key, value] of Object.entries(data)) {
@@ -65,8 +69,8 @@ export function readData(key) {
 
   open_request.onsuccess = function (event) {
     const db = event.target.result;
-    const transaction = db.transaction(storeName, "readonly");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(dataStoreName, "readonly");
+    const store = transaction.objectStore(dataStoreName);
     const get_request = store.get(key);
 
     get_request.onsuccess = function (event) {};
@@ -83,8 +87,8 @@ export function readAllData() {
     const data = [];
     open_request.onsuccess = function (event) {
       const db = event.target.result;
-      const transaction = db.transaction(storeName, "readonly");
-      const store = transaction.objectStore(storeName);
+      const transaction = db.transaction(dataStoreName, "readonly");
+      const store = transaction.objectStore(dataStoreName);
       const cursor_request = store.openCursor();
 
       cursor_request.onsuccess = function (event) {
@@ -116,8 +120,8 @@ export function searchData(keyword) {
     const filteredData = [];
     open_request.onsuccess = function (event) {
       const db = event.target.result;
-      const transaction = db.transaction(storeName, "readonly");
-      const store = transaction.objectStore(storeName);
+      const transaction = db.transaction(dataStoreName, "readonly");
+      const store = transaction.objectStore(dataStoreName);
       const cursor_request = store.openCursor();
 
       cursor_request.onsuccess = function (event) {
@@ -150,8 +154,8 @@ export function deleteKey(key) {
 
   open_request.onsuccess = function (event) {
     const db = event.target.result;
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(dataStoreName, "readwrite");
+    const store = transaction.objectStore(dataStoreName);
     const delete_request = store.delete(key);
 
     delete_request.onsuccess = function () {};
@@ -177,8 +181,8 @@ export function deleteAllData() {
 
   open_request.onsuccess = function (event) {
     const db = event.target.result;
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
+    const transaction = db.transaction(dataStoreName, "readwrite");
+    const store = transaction.objectStore(dataStoreName);
     const clear_request = store.clear();
 
     clear_request.onsuccess = function () {
@@ -209,4 +213,70 @@ function toSentenceCase(str) {
 
 function cleanString(str) {
   return toSentenceCase(str.trim().replace(/^[^\w]+|[^\w]+$/g, ""));
+}
+
+// Chat functions
+
+export function getMessages() {
+  return new Promise((resolve, reject) => {
+    const open_request = indexedDB.open(dbName);
+    const messages = [];
+    open_request.onsuccess = function (event) {
+      const db = event.target.result;
+      const transaction = db.transaction(chatStoreName, "readonly");
+      const store = transaction.objectStore(chatStoreName);
+      const cursor_request = store.openCursor();
+
+      cursor_request.onsuccess = function (event) {
+        const cursor = event.target.result;
+        if (cursor) {
+          messages.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(messages);
+        }
+      };
+
+      cursor_request.onerror = function (event) {
+        console.error("Failed to read chat data:", event.target.error);
+        reject(event.target.error);
+      };
+    };
+
+    open_request.onerror = function (event) {
+      console.error("Database error:", event.target.errorCode);
+      reject(event.target.errorCode);
+    };
+  });
+}
+
+export function saveMessage(message) {
+  return new Promise((resolve, reject) => {
+    const open_request = indexedDB.open(dbName);
+    open_request.onsuccess = function (event) {
+      const db = event.target.result;
+      const transaction = db.transaction(chatStoreName, "readwrite");
+      const store = transaction.objectStore(chatStoreName);
+
+      if (!message.id) {
+        message.id = Date.now().toString();
+      }
+
+      const add_request = store.put(message);
+
+      add_request.onsuccess = function () {
+        resolve();
+      };
+
+      add_request.onerror = function (event) {
+        console.error("Failed to store chat message:", event.target.error);
+        reject(event.target.error);
+      };
+    };
+
+    open_request.onerror = function (event) {
+      console.error("Database error:", event.target.errorCode);
+      reject(event.target.errorCode);
+    };
+  });
 }
