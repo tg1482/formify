@@ -1,8 +1,10 @@
 import { CreateExtensionServiceWorkerMLCEngine } from "@mlc-ai/web-llm";
+import { getMessages, saveMessage } from "./db.js";
 
-let engine;
 let chatReady = false;
+let engine;
 let userInput;
+let messagesLoaded = false;
 const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
 
 // Callback function to update model loading progress
@@ -33,11 +35,8 @@ function initializeEngine() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  initializeEngine();
-});
-
 export function showChat() {
+  messagesLoaded = false;
   const container = document.getElementById("contentContainer");
   container.innerHTML = ""; // Clear previous content
 
@@ -71,12 +70,15 @@ export function showChat() {
   inputArea.appendChild(sendButton);
 
   // Function to add messages to display
-  function addMessage(author, text) {
+  function addMessage(author, text, saveToDB = true) {
     const messageElement = document.createElement("div");
     messageElement.className = `message ${author}`;
     messageElement.textContent = text;
     messageDisplay.appendChild(messageElement);
     messageDisplay.scrollTop = messageDisplay.scrollHeight; // Scroll to bottom
+    if (saveToDB) {
+      saveMessage({ author, text });
+    }
   }
 
   // Event listener for send button
@@ -97,7 +99,7 @@ export function showChat() {
         { role: "user", content: userText },
       ];
 
-      addMessage("ai", "Typing..."); // Show typing message
+      addMessage("ai", "Typing...", false); // Show typing message
 
       const reply = await engine.chat.completions.create({
         messages,
@@ -106,11 +108,14 @@ export function showChat() {
 
       let fullReply = "";
       for await (const chunk of reply) {
-        fullReply += chunk.choices[0].delta.content;
+        const chunkMessage = chunk.choices[0].message.content;
+        fullReply += chunkMessage;
       }
 
-      messageDisplay.lastChild.textContent = fullReply; // Replace "Typing..." with actual reply
-      userInput.value = ""; // Clear input after sending
+      // remove the typing message which is the last message
+      messageDisplay.removeChild(messageDisplay.lastChild);
+      addMessage("ai", fullReply, false);
+      userInput.value = "";
     }
   };
 
@@ -121,6 +126,38 @@ export function showChat() {
     }
   });
 
+  function loadMessages() {
+    if (messagesLoaded) {
+      return;
+    }
+    getMessages().then((messages) => {
+      messages.forEach((message) => {
+        addMessage(message.author, message.text, false);
+      });
+      messagesLoaded = true; // Set flag to true after messages are loaded
+    });
+  }
+
+  function init() {
+    if (!engine) {
+      chatReady = false;
+      initializeEngine();
+    }
+    if (chatReady) {
+      userInput.disabled = false;
+      userInput.placeholder = "Type a message...";
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      init();
+    });
+  } else {
+    init();
+  }
+
+  loadMessages();
   // Initial AI message
-  addMessage("ai", "Message from AI");
+  addMessage("ai", "Welcome to Formie Chat", false);
 }
