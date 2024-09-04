@@ -53,16 +53,24 @@ function addCustomSidebar() {
   dataContainer.id = "dataContainer";
   contentPrevious.appendChild(dataContainer);
   sidebar.appendChild(contentPrevious);
-  fetchDataFromDB("all");
+
+  // Add this new code for the bottom bar
+  const bottomBar = document.createElement("div");
+  bottomBar.id = "bottomBar";
 
   const deleteAllButton = document.createElement("button");
-  deleteAllButton.textContent = "Delete All ☠️";
-  deleteAllButton.className = "delete-all-button";
+  deleteAllButton.textContent = "Delete All";
+  deleteAllButton.id = "deleteAllButton";
   deleteAllButton.onclick = () => {
-    document.getElementById("dataContainer").innerHTML = "";
-    chrome.runtime.sendMessage({ action: "deleteAll" });
+    if (confirm("Are you sure you want to delete all data?")) {
+      chrome.runtime.sendMessage({ action: "deleteAllData" }, () => {
+        fetchDataFromDB("all");
+      });
+    }
   };
-  sidebar.appendChild(deleteAllButton);
+
+  bottomBar.appendChild(deleteAllButton);
+  sidebar.appendChild(bottomBar);
 
   document.body.appendChild(sidebar);
 }
@@ -72,8 +80,17 @@ function fetchDataFromDB(keyword) {
   chrome.runtime.sendMessage(message, (response) => {
     const container = document.getElementById("dataContainer");
     container.innerHTML = "";
-    response?.entries?.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
-    response?.entries?.forEach((entry) => dataEntryTemplate(entry, container));
+    if (response && response.entries) {
+      if (response.entries.length > 0) {
+        response.entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
+        response.entries.forEach((entry) => dataEntryTemplate(entry, container));
+      } else {
+        container.innerHTML = "<p>No data found.</p>";
+      }
+    } else {
+      console.error("Error fetching data:", response);
+      container.innerHTML = "<p>Error fetching data. Please check the console for details.</p>";
+    }
   });
 }
 
@@ -81,13 +98,15 @@ function updateSidebarUI(entries, keyword) {
   const container = document.getElementById("dataContainer");
   container.innerHTML = "";
 
-  if (keyword !== "all" && keyword !== "" && keyword !== undefined) {
-    const searchbar = document.querySelector(".search-bar-container input");
-    searchbar.value = keyword;
-  }
+  const searchbar = document.querySelector(".search-bar-container input");
+  searchbar.value = keyword || "";
 
-  entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
-  entries.forEach((entry) => dataEntryTemplate(entry, container));
+  if (entries && entries.length > 0) {
+    entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
+    entries.forEach((entry) => dataEntryTemplate(entry, container));
+  } else {
+    container.innerHTML = "<p>No data found.</p>";
+  }
 }
 
 function dataEntryTemplate(entry, container) {
@@ -166,3 +185,7 @@ function timeSince(date) {
 }
 
 addCustomSidebar();
+
+fetchDataFromDB("all");
+
+document.addEventListener("DOMContentLoaded", () => fetchDataFromDB("all"));

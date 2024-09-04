@@ -1,61 +1,61 @@
+let db; // Add this line at the top of the file, outside any function
+
 const dbName = "FormDataDB";
 const storeName = "entries";
 
 export function initDB() {
-  let db;
-  const request = indexedDB.open(dbName, 1);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("FormieDB", 1);
 
-  request.onupgradeneeded = function (event) {
-    db = event.target.result;
-    if (!db.objectStoreNames.contains(storeName)) {
-      db.createObjectStore(storeName, { keyPath: "id" });
-    }
-  };
+    request.onerror = (event) => {
+      console.error("Database error:", event.target.error);
+      reject(event.target.error);
+    };
 
-  request.onerror = function (event) {
-    console.error("Database error: " + event.target.errorCode);
-  };
+    request.onsuccess = (event) => {
+      console.log("Database opened successfully");
+      db = event.target.result; // This line should now work
+      resolve(db);
+    };
 
-  request.onsuccess = function (event) {};
+    request.onupgradeneeded = (event) => {
+      console.log("Database upgrade needed");
+      const db = event.target.result;
+      const objectStore = db.createObjectStore("formData", { keyPath: "id", autoIncrement: true });
+      objectStore.createIndex("createdAt", "createdAt", { unique: false });
+      console.log("Object store created");
+    };
+  });
 }
 
 export function storeFormData(data) {
   return new Promise((resolve, reject) => {
-    const open_request = indexedDB.open(dbName);
+    if (!db) {
+      reject(new Error("Database not initialized"));
+      return;
+    }
 
-    open_request.onsuccess = function (event) {
-      const db = event.target.result;
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
 
-      // Open a transaction as soon as the database is open
-      const transaction = db.transaction(storeName, "readwrite");
-      const store = transaction.objectStore(storeName);
+    // Iterate through each key-value pair in the data object
+    for (const [key, value] of Object.entries(data)) {
+      const update_request = store.put({ id: cleanString(key), data: value });
 
-      // Iterate through each key-value pair in the data object
-      for (const [key, value] of Object.entries(data)) {
-        const update_request = store.put({ id: cleanString(key), data: value });
-
-        update_request.onsuccess = function () {};
-
-        update_request.onerror = function (event) {
-          console.error("Failed to store form data for key:", key, "error:", event.target.error);
-          reject(event.target.error);
-        };
-      }
-
-      // Listen to transaction complete to confirm data is written
-      transaction.oncomplete = function () {
-        resolve();
-      };
-
-      transaction.onerror = function (event) {
-        console.error("Transaction failed: ", event.target.error);
+      update_request.onerror = function (event) {
+        console.error("Failed to store form data for key:", key, "error:", event.target.error);
         reject(event.target.error);
       };
+    }
+
+    // Listen to transaction complete to confirm data is written
+    transaction.oncomplete = function () {
+      resolve();
     };
 
-    open_request.onerror = function (event) {
-      console.error("Database error: " + event.target.errorCode);
-      reject(event.target.errorCode);
+    transaction.onerror = function (event) {
+      console.error("Transaction failed: ", event.target.error);
+      reject(event.target.error);
     };
   });
 }

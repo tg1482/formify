@@ -7,8 +7,14 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["all"],
   });
   console.log("Extension installed");
-  initDB();
-  initHotKeys();
+  initDB()
+    .then(() => {
+      console.log("Database initialized successfully");
+      initHotKeys();
+    })
+    .catch((error) => {
+      console.error("Failed to initialize database:", error);
+    });
 });
 
 let isSidebarOpen = false;
@@ -25,8 +31,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "fetchData") {
     readAllData().then((entries) => {
-      chrome.runtime.sendMessage({ action: "displayData", entries: entries });
-      sendResponse({ message: "Data fetched successfully" });
+      sendResponse({ entries: entries });
     });
     return true;
   }
@@ -76,8 +81,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "deleteAllData") {
-    deleteAllData();
-    sendResponse({ message: "All data deleted successfully" });
+    deleteAllData()
+      .then(() => {
+        sendResponse({ message: "All data deleted successfully" });
+      })
+      .catch((error) => {
+        console.error("Error deleting all data:", error);
+        sendResponse({ message: "Error deleting all data" });
+      });
     return true;
   }
   return false;
