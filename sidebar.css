@@ -170,21 +170,17 @@ html {
   text-shadow: 1px 1px #001933;
 }
 
-.copy-button,
-.delete-button {
+.copy-button {
+  color: #00ff00;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
   font-family: "VT323", monospace;
   font-size: 16px;
-  border: none;
-  background-color: transparent;
-  cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.copy-button {
-  color: #00ff00;
-}
-
-.copy-button::after {
+.copy-button:empty::after {
   content: "[C]";
 }
 
@@ -269,4 +265,29 @@ html {
 /* Adjust other text sizes as needed */
 .data-entry p[style*="font-size: 12px"] {
   font-size: 14px !important;
+}
+
+.copied-text {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 255, 0, 0.8);
+  color: #001933;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fadeOut 1s forwards;
+  margin-left: 5px;
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }

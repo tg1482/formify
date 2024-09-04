@@ -137,11 +137,8 @@ function moveFocus(direction, entries) {
 function copyFocusedEntry(entries) {
   const focusedEntry = entries[focusedIndex];
   const value = focusedEntry.querySelector("p").textContent.replace(/^"|"$/g, "");
-  navigator.clipboard.writeText(value).then(() => {
-    // Visual feedback for copy
-    focusedEntry.classList.add("copied");
-    setTimeout(() => focusedEntry.classList.remove("copied"), 500);
-  });
+  const copyButton = focusedEntry.querySelector(".copy-button");
+  copyEntry(value, copyButton);
 }
 
 function deleteFocusedEntry(entries) {
@@ -200,6 +197,7 @@ function dataEntryTemplate(entry, container) {
 
   const copyButton = document.createElement("button");
   copyButton.className = "copy-button";
+  copyButton.onclick = () => copyEntry(entry.data.value, copyButton);
   valueContainer.appendChild(copyButton);
 
   const value = document.createElement("p");
@@ -252,6 +250,16 @@ function timeSince(date) {
     return Math.floor(interval) + " minutes ago";
   }
   return Math.floor(seconds) + " seconds ago";
+}
+
+function copyEntry(value, button) {
+  navigator.clipboard.writeText(value).then(() => {
+    const originalText = button.textContent;
+    button.textContent = "[Copied!]";
+    setTimeout(() => {
+      button.textContent = originalText;
+    }, 1000);
+  });
 }
 
 addCustomSidebar();
