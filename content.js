@@ -21,11 +21,9 @@ function saveData(entries) {
 }
 
 function toggleSideBar() {
-  try {
-    chrome.runtime.sendMessage({ action: "toggleSidebar" });
-  } catch (error) {
-    console.error("Error sending message:", error);
-  }
+  chrome.runtime.sendMessage({ action: "toggleSidebar" }, (response) => {
+    console.log(response.message); // Log the response for debugging
+  });
 }
 
 // Function to listen to input/textarea blur events
@@ -85,18 +83,9 @@ if (document.readyState === "loading") {
 
 function setupHotkeyListener() {
   document.addEventListener("keydown", function (event) {
-    try {
-      if (chrome?.storage?.local) {
-        chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
-          if (items.hotKey1 && items.hotKey2) {
-            if (checkHotkeys(event, items.hotKey1, items.hotKey2)) {
-              toggleSideBar();
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.log("Error getting hotkeys:", error);
+    if (event.ctrlKey && event.key.toLowerCase() === "o") {
+      event.preventDefault(); // Prevent the default browser action
+      toggleSideBar();
     }
   });
 }

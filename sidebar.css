@@ -1,8 +1,26 @@
+@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
+
+/* Reset default styles */
+body,
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #001933;
+}
+
 #formie-sidebar {
   width: 100%;
   height: 100%;
-  color: black;
-  background-color: white;
+  color: #00ff00;
+  background-color: #001933;
+  font-family: "VT323", monospace;
+  box-shadow: inset 0 0 10px #00ff00;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .close-button {
@@ -12,6 +30,12 @@
   border: none;
   background-color: transparent;
   cursor: pointer;
+  color: #00ff00;
+  font-family: "VT323", "Courier New", monospace;
+}
+
+.close-button::after {
+  content: "[X]";
 }
 
 /* at the bottom center */
@@ -27,37 +51,62 @@
 
 #formie-sidebar h1 {
   text-align: center;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: bold;
-  padding: 10px;
+  padding: 15px;
+  color: #33ccff;
+  text-shadow: 2px 2px #001933, 4px 4px #00ff00;
+  border-bottom: 2px solid #00ff00;
+  margin-bottom: 10px;
 }
 
 #contentPrevious {
+  flex-grow: 1;
   overflow-y: auto;
-  height: calc(100% - 190px); /* Adjusted to account for the bottom bar */
   padding: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #00ff00 #001933;
+}
+
+#contentPrevious::-webkit-scrollbar {
+  width: 8px;
+}
+
+#contentPrevious::-webkit-scrollbar-track {
+  background: #001933;
+}
+
+#contentPrevious::-webkit-scrollbar-thumb {
+  background-color: #00ff00;
+  border-radius: 4px;
 }
 
 .search-bar-container {
   padding: 10px;
+  margin-bottom: 15px;
 }
 
 .search-bar-container input[type="text"] {
   width: 100%;
   padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 2px solid #00ff00;
+  background-color: #002b4d;
+  color: #00ff00;
+  font-family: "VT323", monospace;
+  font-size: 16px;
+  outline: none;
+}
+
+.search-bar-container input[type="text"]:focus {
+  box-shadow: 0 0 5px #00ff00;
 }
 
 #dataContainer div {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px 10px;
+  padding: 10px;
   margin-bottom: 10px;
   margin-left: 10px;
   margin-right: 10px;
-  background-color: #f9f9f9;
+  background-color: #002b4d;
   position: relative;
 }
 
@@ -71,28 +120,83 @@
 }
 
 .data-entry {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  margin: 10px;
-  background-color: #f9f9f9;
+  border: none;
+  padding: 15px;
+  margin: 15px 5px;
+  background-color: #002b4d;
   position: relative;
   max-width: 100%;
   overflow: hidden;
+  transition: all 0.3s ease;
+  border-radius: 5px;
+}
+
+.data-entry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 255, 0, 0.2);
+}
+
+.data-entry.focused {
+  border: 2px solid #ffff00;
+  box-shadow: 0 0 10px #ffff00;
+}
+
+.data-entry.copied {
+  animation: flash 0.5s;
+}
+
+@keyframes flash {
+  0%,
+  100% {
+    background-color: #002b4d;
+  }
+  50% {
+    background-color: #004d00;
+  }
 }
 
 .data-entry h3 {
   text-align: center;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
   margin-bottom: 10px;
+  color: #33ccff;
+  text-shadow: 1px 1px #001933;
 }
 
-.data-entry .copy-button {
-  margin-top: 0;
+.copy-button,
+.delete-button {
+  font-family: "VT323", monospace;
+  font-size: 16px;
   border: none;
   background-color: transparent;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.copy-button {
+  color: #00ff00;
+}
+
+.copy-button::after {
+  content: "[C]";
+}
+
+.delete-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #ff4d4d;
+}
+
+.delete-button::after {
+  content: "[D]";
+}
+
+.copy-button:hover,
+.delete-button:hover {
+  transform: scale(1.1);
+  text-shadow: 0 0 5px currentColor;
 }
 
 .data-entry div {
@@ -102,20 +206,23 @@
 }
 
 .data-entry p {
-  text-align: left;
-  word-wrap: break-word;
-  hyphens: auto;
-  margin: 0;
-  white-space: normal;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 5px 0;
 }
 
-.data-entry .delete-button {
+.delete-button {
   position: absolute;
   top: 10px;
   right: 10px;
   border: none;
   background-color: transparent;
   cursor: pointer;
+  color: #ff4d4d;
+}
+
+.delete-button::after {
+  content: "[D]";
 }
 
 #bottomBar {
@@ -123,25 +230,33 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 50px;
-  background-color: #f0f0f0;
+  height: 60px;
+  background-color: #002b4d;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-top: 1px solid #ddd;
+  border-top: 2px solid #00ff00;
 }
 
 #deleteAllButton {
-  padding: 8px 16px;
-  background-color: #ff4d4d;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  padding: 10px 20px;
+  background-color: #002b4d;
+  color: #ff4d4d;
+  border: 2px solid #ff4d4d;
   cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
+  font-size: 16px;
+  font-family: "VT323", monospace;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+}
+
+#deleteAllButton::before {
+  content: "☠ ";
+  font-size: 20px;
 }
 
 #deleteAllButton:hover {
-  background-color: #ff3333;
+  background-color: #ff4d4d;
+  color: #002b4d;
+  box-shadow: 0 0 10px #ff4d4d;
 }

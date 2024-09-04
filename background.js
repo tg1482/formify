@@ -17,7 +17,8 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
-let isSidebarOpen = false;
+let sidePanelOpen = false;
+let sidebarPort = null;
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "openSidePanel") {
@@ -26,6 +27,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     isSidebarOpen = true;
   }
   return true;
+});
+
+chrome.runtime.onConnect.addListener(function (port) {
+  if (port.name === "mySidepanel") {
+    sidePanelOpen = true;
+    sidebarPort = port;
+
+    port.onDisconnect.addListener(() => {
+      sidePanelOpen = false;
+      sidebarPort = null;
+    });
+  }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -37,21 +50,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "toggleSidebar") {
-    if (isSidebarOpen) {
-      chrome.runtime.sendMessage({ action: "closeSidebar" });
-      isSidebarOpen = false;
-      sendResponse({ message: "Sidebar closed" });
+    if (sidePanelOpen) {
+      chrome.sidePanel.close();
     } else {
       chrome.sidePanel.open({ tabId: sender.tab.id });
-      isSidebarOpen = true;
-      sendResponse({ message: "Sidebar opened" });
     }
+    sendResponse({ message: sidePanelOpen ? "Sidebar closed" : "Sidebar opened" });
     return true;
   }
 
   if (request.action === "saveData") {
     storeFormData(request.entries).then(() => {
-      chrome.runtime.sendMessage({ action: "refreshData" });
+      if (sidebarPort) {
+        sidebarPort.postMessage({ action: "refreshData" });
+      }
       sendResponse({ message: "Data saved successfully" });
     });
     return true; // To indicate asynchronous response
@@ -60,7 +72,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "searchData") {
     const keyword = request.keyword;
     searchData(keyword).then((filteredData) => {
-      chrome.runtime.sendMessage({ action: "displayData", entries: filteredData, keyword });
+      if (sidebarPort) {
+        sidebarPort.postMessage({ action: "displayData", entries: filteredData, keyword });
+      }
       sendResponse({ message: "Data searched successfully" });
     });
     return true;

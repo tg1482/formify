@@ -19,6 +19,8 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   return false;
 });
 
+let focusedIndex = -1;
+
 function addCustomSidebar() {
   const link = document.createElement("link");
   link.rel = "stylesheet";
@@ -27,12 +29,6 @@ function addCustomSidebar() {
 
   const sidebar = document.createElement("div");
   sidebar.id = "formie-sidebar";
-
-  const closeButton = document.createElement("button");
-  closeButton.textContent = "❌";
-  closeButton.className = "close-button";
-  closeButton.onclick = () => window.close();
-  sidebar.appendChild(closeButton);
 
   const header = document.createElement("h1");
   header.textContent = "Formie Data";
@@ -54,7 +50,6 @@ function addCustomSidebar() {
   contentPrevious.appendChild(dataContainer);
   sidebar.appendChild(contentPrevious);
 
-  // Add this new code for the bottom bar
   const bottomBar = document.createElement("div");
   bottomBar.id = "bottomBar";
 
@@ -73,6 +68,81 @@ function addCustomSidebar() {
   sidebar.appendChild(bottomBar);
 
   document.body.appendChild(sidebar);
+
+  // Add event listener for keydown events
+  document.addEventListener("keydown", handleKeyPress);
+
+  // Focus on the first element when the sidebar is opened
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "sidebarOpened") {
+      focusFirstElement();
+    }
+  });
+}
+
+function focusFirstElement() {
+  const entries = document.querySelectorAll(".data-entry");
+  if (entries.length > 0) {
+    focusedIndex = 0;
+    entries[0].classList.add("focused");
+    entries[0].scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function handleKeyPress(event) {
+  const entries = document.querySelectorAll(".data-entry");
+  if (entries.length === 0) return;
+
+  switch (event.key.toLowerCase()) {
+    case "j":
+    case "arrowdown":
+      moveFocus(1, entries);
+      break;
+    case "k":
+    case "arrowup":
+      moveFocus(-1, entries);
+      break;
+    case "c":
+      copyFocusedEntry(entries);
+      break;
+    case "d":
+      deleteFocusedEntry(entries);
+      break;
+  }
+}
+
+function moveFocus(direction, entries) {
+  if (focusedIndex !== -1) {
+    entries[focusedIndex].classList.remove("focused");
+  }
+  focusedIndex = (focusedIndex + direction + entries.length) % entries.length;
+  entries[focusedIndex].classList.add("focused");
+  entries[focusedIndex].scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function copyFocusedEntry(entries) {
+  const focusedEntry = entries[focusedIndex];
+  const value = focusedEntry.querySelector("p").textContent.replace(/^"|"$/g, "");
+  navigator.clipboard.writeText(value).then(() => {
+    // Visual feedback for copy
+    focusedEntry.classList.add("copied");
+    setTimeout(() => focusedEntry.classList.remove("copied"), 500);
+  });
+}
+
+function deleteFocusedEntry(entries) {
+  const focusedEntry = entries[focusedIndex];
+  const id = focusedEntry.querySelector("h3 strong").textContent;
+  chrome.runtime.sendMessage({ action: "deleteKey", id: id }, () => {
+    focusedEntry.remove();
+    // Adjust focus after deletion
+    if (entries.length > 1) {
+      focusedIndex = Math.min(focusedIndex, entries.length - 2);
+      moveFocus(0, document.querySelectorAll(".data-entry"));
+    } else {
+      focusedIndex = -1;
+    }
+  });
 }
 
 function fetchDataFromDB(keyword) {
@@ -84,6 +154,7 @@ function fetchDataFromDB(keyword) {
       if (response.entries.length > 0) {
         response.entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
         response.entries.forEach((entry) => dataEntryTemplate(entry, container));
+        focusFirstElement();
       } else {
         container.innerHTML = "<p>No data found.</p>";
       }
@@ -104,6 +175,7 @@ function updateSidebarUI(entries, keyword) {
   if (entries && entries.length > 0) {
     entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
     entries.forEach((entry) => dataEntryTemplate(entry, container));
+    focusFirstElement(); // Focus on the first element after updating
   } else {
     container.innerHTML = "<p>No data found.</p>";
   }
@@ -121,14 +193,7 @@ function dataEntryTemplate(entry, container) {
   valueContainer.style.alignItems = "center";
 
   const copyButton = document.createElement("button");
-  copyButton.textContent = "📋";
   copyButton.className = "copy-button";
-  copyButton.onclick = () => {
-    navigator.clipboard.writeText(entry.data.value).then(() => {
-      copyButton.textContent = "✅";
-      setTimeout(() => (copyButton.textContent = "📋"), 2000);
-    });
-  };
   valueContainer.appendChild(copyButton);
 
   const value = document.createElement("p");
@@ -148,7 +213,6 @@ function dataEntryTemplate(entry, container) {
   div.appendChild(createdAt);
 
   const deleteButton = document.createElement("button");
-  deleteButton.textContent = "🗑️";
   deleteButton.className = "delete-button";
   deleteButton.onclick = () => {
     div.remove();
@@ -189,3 +253,6 @@ addCustomSidebar();
 fetchDataFromDB("all");
 
 document.addEventListener("DOMContentLoaded", () => fetchDataFromDB("all"));
+
+// Add this line at the end of the file
+chrome.runtime.connect({ name: "mySidepanel" });
