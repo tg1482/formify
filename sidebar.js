@@ -1,22 +1,19 @@
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  if (message.action === "displayData") {
-    updateSidebarUI(message.entries, message.keyword);
-    return true;
+  switch (message.action) {
+    case "displayData":
+      updateSidebarUI(message.entries, message.keyword);
+      break;
+    case "closeSidebar":
+      window.close();
+      break;
+    case "refreshData":
+      const searchbar = document.querySelector(".search-bar-container input");
+      fetchDataFromDB(searchbar.value || "all");
+      break;
+    default:
+      console.warn("Unhandled message action:", message.action);
   }
-  if (message.action === "closeSidebar") {
-    window.close();
-    return true;
-  }
-  if (message.action === "refreshData") {
-    const searchbar = document.querySelector(".search-bar-container input");
-    if (searchbar.value === "") {
-      fetchDataFromDB("all");
-    } else {
-      fetchDataFromDB(searchbar.value);
-    }
-    return true;
-  }
-  return false;
+  return true;
 });
 
 let focusedIndex = -1;
@@ -371,6 +368,23 @@ function dataEntryTemplate(entry, container, isLast) {
   pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
   div.appendChild(pageHeader);
 
+  const domain = document.createElement("p");
+  domain.style.fontSize = "12px";
+  domain.innerHTML = `<strong>Domain:</strong> ${entry.data.domain}`;
+  div.appendChild(domain);
+
+  const url = document.createElement("p");
+  url.style.fontSize = "12px";
+  url.innerHTML = `<strong>URL:</strong> <a href="${entry.data.url}" target="_blank">${entry.data.url}</a>`;
+  div.appendChild(url);
+
+  const inputInfo = document.createElement("p");
+  inputInfo.style.fontSize = "12px";
+  inputInfo.innerHTML = `<strong>Input Type:</strong> ${entry.data.inputType}${
+    entry.data.inputName ? `, Name: ${entry.data.inputName}` : ""
+  }${entry.data.inputId ? `, ID: ${entry.data.inputId}` : ""}`;
+  div.appendChild(inputInfo);
+
   const createdAt = document.createElement("p");
   createdAt.style.fontSize = "12px";
   createdAt.innerHTML = `<strong>Updated:</strong> <i>${timeSince(entry.data.createdAt)}</i>`;
@@ -430,7 +444,4 @@ addCustomSidebar();
 
 fetchDataFromDB("all");
 
-document.addEventListener("DOMContentLoaded", () => fetchDataFromDB("all"));
-
-// Add this line at the end of the file
 chrome.runtime.connect({ name: "mySidepanel" });

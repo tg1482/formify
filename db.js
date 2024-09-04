@@ -5,7 +5,7 @@ const storeName = "entries";
 
 export function initDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("FormieDB", 1);
+    const request = indexedDB.open(dbName, 3);
 
     request.onerror = (event) => {
       console.error("Database error:", event.target.error);

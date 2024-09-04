@@ -13,10 +13,16 @@ function handleTextSelection() {
 }
 
 function saveData(entries) {
-  try {
-    chrome.runtime.sendMessage({ action: "saveData", entries });
-  } catch (error) {
-    console.error("Error sending message:", error);
+  if (chrome.runtime && chrome.runtime.id) {
+    chrome.runtime.sendMessage({ action: "saveData", entries }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error saving data:", chrome.runtime.lastError.message);
+      } else {
+        console.log(response.message);
+      }
+    });
+  } else {
+    console.error("Extension context invalidated. Please refresh the page.");
   }
 }
 
@@ -30,6 +36,7 @@ function toggleSideBar() {
 
 function inputListeningInit() {
   const url = window.location.href;
+  const domain = new URL(url).hostname;
   const pageHeader = document.title;
 
   document.querySelectorAll("input, textarea").forEach((input) => {
@@ -37,9 +44,18 @@ function inputListeningInit() {
     input.addEventListener("blur", () => {
       let key = findLabel(input);
 
-      // Prepare data object
+      // Prepare data object with additional information
       const value = input.value;
-      const data = { value, url, pageHeader, createdAt: new Date().toISOString() };
+      const data = {
+        value,
+        url,
+        domain,
+        pageHeader,
+        createdAt: new Date().toISOString(),
+        inputType: input.tagName.toLowerCase(),
+        inputName: input.name || null,
+        inputId: input.id || null,
+      };
 
       // Optionally, send the data somewhere, like to saveData function
       if (key && value) {

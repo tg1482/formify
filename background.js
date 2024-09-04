@@ -61,13 +61,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "saveData") {
-    storeFormData(request.entries).then(() => {
-      if (sidebarPort) {
-        sidebarPort.postMessage({ action: "refreshData" });
-      }
-      sendResponse({ message: "Data saved successfully" });
-    });
-    return true; // To indicate asynchronous response
+    storeFormData(request.entries)
+      .then(() => {
+        chrome.runtime.sendMessage({ action: "refreshData" });
+        sendResponse({ message: "Data saved successfully" });
+      })
+      .catch((error) => {
+        console.error("Error storing form data:", error);
+        sendResponse({ message: "Error saving data", error: error.message });
+      });
+    return true; // Indicates that the response is asynchronous
   }
 
   if (request.action === "searchData") {
