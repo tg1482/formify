@@ -123,24 +123,49 @@ export function searchData(keyword) {
       cursor_request.onsuccess = function (event) {
         const cursor = event.target.result;
         if (cursor) {
-          if (cursor.key.toLowerCase().includes(keyword.toLowerCase())) {
-            filteredData.push(cursor.value);
+          const entry = cursor.value;
+          const searchableFields = [
+            { field: "id", value: entry.id },
+            { field: "value", value: entry.data.value },
+            { field: "pageHeader", value: entry.data.pageHeader },
+            { field: "url", value: entry.data.url },
+            { field: "domain", value: entry.data.domain },
+          ];
+
+          const matchIndex = searchableFields.findIndex((item) => item.value && item.value.toLowerCase().includes(keyword.toLowerCase()));
+
+          if (matchIndex !== -1) {
+            filteredData.push({ ...entry, matchPriority: matchIndex });
           }
           cursor.continue();
         } else {
-          resolve(filteredData); // Resolve the promise with filtered data
+          // Sort the filtered data based on matchPriority
+          filteredData.sort((a, b) => {
+            if (a.matchPriority !== b.matchPriority) {
+              return a.matchPriority - b.matchPriority;
+            }
+            // If matchPriority is the same, sort alphabetically by id
+            return a.id.toLowerCase().localeCompare(b.id.toLowerCase());
+          });
+
+          resolve(
+            filteredData.map((item) => {
+              const { matchPriority, ...rest } = item;
+              return rest;
+            })
+          );
         }
       };
 
       cursor_request.onerror = function (event) {
         console.error("Failed to read data:", event.target.error);
-        reject(event.target.error); // Reject the promise on error
+        reject(event.target.error);
       };
     };
 
     open_request.onerror = function (event) {
       console.error("Database error:", event.target.errorCode);
-      reject(event.target.errorCode); // Reject the promise on error
+      reject(event.target.errorCode);
     };
   });
 }
