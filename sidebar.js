@@ -348,8 +348,7 @@ function dataEntryTemplate(entry, container, isLast) {
   div.appendChild(id);
 
   const valueContainer = document.createElement("div");
-  valueContainer.style.display = "flex";
-  valueContainer.style.alignItems = "center";
+  valueContainer.className = "value-container";
 
   const copyButton = document.createElement("button");
   copyButton.className = "copy-button";
@@ -357,38 +356,75 @@ function dataEntryTemplate(entry, container, isLast) {
   valueContainer.appendChild(copyButton);
 
   const value = document.createElement("p");
-  value.id = "main-entry";
+  value.className = "main-entry";
   value.innerHTML = `"${entry.data.value}"`;
-  value.style.marginLeft = "10px";
   valueContainer.appendChild(value);
   div.appendChild(valueContainer);
 
-  const pageHeader = document.createElement("p");
-  pageHeader.style.fontSize = "12px";
-  pageHeader.innerHTML = `<strong>Source:</strong> ${entry.data.pageHeader}`;
-  div.appendChild(pageHeader);
+  const contextContainer = document.createElement("div");
+  contextContainer.className = "context-container";
 
-  const domain = document.createElement("p");
-  domain.style.fontSize = "12px";
-  domain.innerHTML = `<strong>Domain:</strong> ${entry.data.domain}`;
-  div.appendChild(domain);
+  const essentialInfo = [
+    { label: "Source", value: entry.data.pageHeader },
+    { label: "Domain", value: entry.data.domain },
+    { label: "URL", value: entry.data.url, isLink: true },
+    { label: "Updated", value: timeSince(entry.data.createdAt) },
+  ];
 
-  const url = document.createElement("p");
-  url.style.fontSize = "12px";
-  url.innerHTML = `<strong>URL:</strong> <a href="${entry.data.url}" target="_blank">${entry.data.url}</a>`;
-  div.appendChild(url);
+  essentialInfo.forEach(({ label, value, isLink }) => {
+    if (value) {
+      const p = document.createElement("p");
+      p.innerHTML = `<span class="context-label">${label}:</span> `;
+      if (isLink) {
+        p.innerHTML += `<a href="${value}" target="_blank" class="context-link">${value}</a>`;
+      } else {
+        p.innerHTML += `<span class="context-value">${value}</span>`;
+      }
+      contextContainer.appendChild(p);
+    }
+  });
 
-  const inputInfo = document.createElement("p");
-  inputInfo.style.fontSize = "12px";
-  inputInfo.innerHTML = `<strong>Input Type:</strong> ${entry.data.inputType}${
-    entry.data.inputName ? `, Name: ${entry.data.inputName}` : ""
-  }${entry.data.inputId ? `, ID: ${entry.data.inputId}` : ""}`;
-  div.appendChild(inputInfo);
+  div.appendChild(contextContainer);
 
-  const createdAt = document.createElement("p");
-  createdAt.style.fontSize = "12px";
-  createdAt.innerHTML = `<strong>Updated:</strong> <i>${timeSince(entry.data.createdAt)}</i>`;
-  div.appendChild(createdAt);
+  // Create collapsible details section only if there are details to show
+  const detailsInfo = [
+    { label: "Input Type", value: entry.data.inputType },
+    { label: "Input Name", value: entry.data.inputName },
+    { label: "Input ID", value: entry.data.inputId },
+  ];
+
+  const hasDetails = detailsInfo.some((item) => item.value);
+
+  if (hasDetails) {
+    const detailsButton = document.createElement("button");
+    detailsButton.className = "details-button";
+    detailsButton.innerHTML = "▼ Details";
+    div.appendChild(detailsButton);
+
+    const detailsContainer = document.createElement("div");
+    detailsContainer.className = "details-container";
+    detailsContainer.style.display = "none";
+
+    detailsInfo.forEach(({ label, value }) => {
+      if (value) {
+        const p = document.createElement("p");
+        p.innerHTML = `<span class="context-label">${label}:</span> <span class="context-value">${value}</span>`;
+        detailsContainer.appendChild(p);
+      }
+    });
+
+    div.appendChild(detailsContainer);
+
+    detailsButton.onclick = () => {
+      if (detailsContainer.style.display === "none") {
+        detailsContainer.style.display = "block";
+        detailsButton.innerHTML = "▲ Details";
+      } else {
+        detailsContainer.style.display = "none";
+        detailsButton.innerHTML = "▼ Details";
+      }
+    };
+  }
 
   const deleteButton = document.createElement("button");
   deleteButton.className = "delete-button";
