@@ -72,12 +72,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "searchData") {
     const keyword = request.keyword;
     searchData(keyword).then((filteredData) => {
-      if (sidebarPort) {
-        sidebarPort.postMessage({ action: "displayData", entries: filteredData, keyword });
-      }
-      sendResponse({ message: "Data searched successfully" });
+      sendResponse({ entries: filteredData });
     });
-    return true;
+    return true; // Indicates an asynchronous response
   }
 
   if (request.action === "deleteKey") {

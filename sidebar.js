@@ -41,7 +41,15 @@ function addCustomSidebar() {
   const searchBar = document.createElement("input");
   searchBar.type = "text";
   searchBar.placeholder = "Search...";
-  searchBar.oninput = (e) => fetchDataFromDB(e.target.value || "all");
+
+  let searchTimeout;
+  searchBar.addEventListener("input", (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      fetchDataFromDB(e.target.value || "all");
+    }, 300); // 300ms delay
+  });
+
   searchBarContainer.appendChild(searchBar);
   contentPrevious.appendChild(searchBarContainer);
 
@@ -94,19 +102,25 @@ function handleKeyPress(event) {
   if (entries.length === 0) return;
 
   switch (event.key.toLowerCase()) {
-    case "j":
     case "arrowdown":
+      event.preventDefault();
       moveFocus(1, entries);
       break;
-    case "k":
     case "arrowup":
+      event.preventDefault();
       moveFocus(-1, entries);
       break;
     case "c":
-      copyFocusedEntry(entries);
+      if (event.ctrlKey) {
+        event.preventDefault();
+        copyFocusedEntry(entries);
+      }
       break;
     case "d":
-      deleteFocusedEntry(entries);
+      if (event.ctrlKey) {
+        event.preventDefault();
+        deleteFocusedEntry(entries);
+      }
       break;
   }
 }
@@ -147,21 +161,13 @@ function deleteFocusedEntry(entries) {
 
 function fetchDataFromDB(keyword) {
   const message = keyword === "all" ? { action: "fetchData" } : { action: "searchData", keyword: keyword };
+
   chrome.runtime.sendMessage(message, (response) => {
-    const container = document.getElementById("dataContainer");
-    container.innerHTML = "";
-    if (response && response.entries) {
-      if (response.entries.length > 0) {
-        response.entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
-        response.entries.forEach((entry) => dataEntryTemplate(entry, container));
-        focusFirstElement();
-      } else {
-        container.innerHTML = "<p>No data found.</p>";
-      }
-    } else {
-      console.error("Error fetching data:", response);
-      container.innerHTML = "<p>Error fetching data. Please check the console for details.</p>";
+    if (chrome.runtime.lastError) {
+      console.error("Error fetching data:", chrome.runtime.lastError);
+      return;
     }
+    updateSidebarUI(response.entries, keyword);
   });
 }
 
@@ -170,12 +176,12 @@ function updateSidebarUI(entries, keyword) {
   container.innerHTML = "";
 
   const searchbar = document.querySelector(".search-bar-container input");
-  searchbar.value = keyword || "";
+  searchbar.value = keyword === "all" ? "" : keyword;
 
   if (entries && entries.length > 0) {
     entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
     entries.forEach((entry) => dataEntryTemplate(entry, container));
-    focusFirstElement(); // Focus on the first element after updating
+    focusFirstElement();
   } else {
     container.innerHTML = "<p>No data found.</p>";
   }
