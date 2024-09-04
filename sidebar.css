@@ -212,6 +212,13 @@ html {
   margin: 5px 0;
 }
 
+#main-entry {
+  background-color: #003366;
+  padding: 10px;
+  border-radius: 3px;
+  margin-bottom: 10px;
+}
+
 .delete-button {
   position: absolute;
   top: 10px;

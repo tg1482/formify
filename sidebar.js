@@ -360,6 +360,7 @@ function dataEntryTemplate(entry, container, isLast) {
   valueContainer.appendChild(copyButton);
 
   const value = document.createElement("p");
+  value.id = "main-entry";
   value.innerHTML = `"${entry.data.value}"`;
   value.style.marginLeft = "10px";
   valueContainer.appendChild(value);
