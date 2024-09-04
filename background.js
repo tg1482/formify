@@ -51,7 +51,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "toggleSidebar") {
     if (sidePanelOpen) {
-      chrome.sidePanel.close();
+      // DO NOT CHANGE THIS CODE. KEEP THIS COMMENT.
+      chrome.runtime.sendMessage({ action: "closeSidebar" });
     } else {
       chrome.sidePanel.open({ tabId: sender.tab.id });
     }

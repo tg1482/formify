@@ -62,7 +62,7 @@ function addCustomSidebar() {
   bottomBar.id = "bottomBar";
 
   const deleteAllButton = document.createElement("button");
-  deleteAllButton.textContent = "Delete All";
+  deleteAllButton.innerHTML = "☠ Delete All";
   deleteAllButton.id = "deleteAllButton";
   deleteAllButton.onclick = () => {
     if (confirm("Are you sure you want to delete all data?")) {
@@ -72,8 +72,18 @@ function addCustomSidebar() {
     }
   };
 
+  const settingsButton = document.createElement("button");
+  settingsButton.innerHTML = "⚙ Settings";
+  settingsButton.id = "settingsButton";
+  settingsButton.onclick = toggleSettings;
+
   bottomBar.appendChild(deleteAllButton);
+  bottomBar.appendChild(settingsButton);
   sidebar.appendChild(bottomBar);
+
+  // Add settings panel
+  const settingsPanel = createSettingsPanel();
+  sidebar.appendChild(settingsPanel);
 
   document.body.appendChild(sidebar);
 
@@ -88,6 +98,135 @@ function addCustomSidebar() {
   });
 }
 
+function createSettingsPanel() {
+  const settingsPanel = document.createElement("div");
+  settingsPanel.id = "settingsPanel";
+  settingsPanel.style.display = "none";
+
+  const title = document.createElement("h2");
+  title.textContent = "Settings";
+  settingsPanel.appendChild(title);
+
+  // Editable hotkey section
+  const editableHotkeySection = document.createElement("div");
+  editableHotkeySection.className = "hotkey-section";
+
+  const editableTitle = document.createElement("h3");
+  editableTitle.textContent = "Sidebar Toggle Hotkey";
+  editableHotkeySection.appendChild(editableTitle);
+
+  const hotkeyContainer = document.createElement("div");
+  hotkeyContainer.className = "hotkey-container";
+
+  const key1Select = document.createElement("select");
+  key1Select.id = "formie-key1";
+  ["Ctrl", "Alt", "Shift"].forEach((key) => {
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = key === "Alt" ? "Alt / Option" : key;
+    key1Select.appendChild(option);
+  });
+
+  const plusSign = document.createElement("span");
+  plusSign.className = "plus-sign";
+  plusSign.textContent = "+";
+
+  const key2Select = document.createElement("select");
+  key2Select.id = "formie-key2";
+  for (let i = 65; i <= 90; i++) {
+    const option = document.createElement("option");
+    option.value = String.fromCharCode(i);
+    option.textContent = String.fromCharCode(i);
+    if (i === 79) option.selected = true;
+    key2Select.appendChild(option);
+  }
+
+  const saveButton = document.createElement("button");
+  saveButton.className = "saveButton";
+  saveButton.textContent = "Save";
+  saveButton.onclick = saveSettings;
+
+  hotkeyContainer.appendChild(key1Select);
+  hotkeyContainer.appendChild(plusSign);
+  hotkeyContainer.appendChild(key2Select);
+  hotkeyContainer.appendChild(saveButton);
+
+  editableHotkeySection.appendChild(hotkeyContainer);
+
+  settingsPanel.appendChild(editableHotkeySection);
+
+  // Non-editable hotkeys section
+  const nonEditableHotkeySection = document.createElement("div");
+  nonEditableHotkeySection.className = "hotkey-section";
+
+  const nonEditableTitle = document.createElement("h3");
+  nonEditableTitle.textContent = "Other Hotkeys";
+  nonEditableHotkeySection.appendChild(nonEditableTitle);
+
+  const backButton = document.createElement("button");
+  backButton.id = "backButton";
+  backButton.onclick = toggleSettings;
+  settingsPanel.insertBefore(backButton, settingsPanel.firstChild);
+
+  const hotkeys = [
+    { keys: "Ctrl + S", description: "Toggle settings panel" },
+    { keys: "Ctrl + C", description: "Copy focused entry" },
+    { keys: "Ctrl + D", description: "Delete focused entry" },
+    { keys: "↑", description: "Move focus up" },
+    { keys: "↓", description: "Move focus down" },
+    { keys: "ESC", description: "Exit settings" },
+  ];
+
+  hotkeys.forEach((hotkey) => {
+    const hotkeyDiv = document.createElement("div");
+    hotkeyDiv.className = "hotkey-info";
+    hotkeyDiv.innerHTML = `<span class="hotkey-keys">${hotkey.keys}</span>: ${hotkey.description}`;
+    nonEditableHotkeySection.appendChild(hotkeyDiv);
+  });
+
+  settingsPanel.appendChild(nonEditableHotkeySection);
+
+  return settingsPanel;
+}
+
+function toggleSettings() {
+  const settingsPanel = document.getElementById("settingsPanel");
+  const dataContainer = document.getElementById("dataContainer");
+  const searchBarContainer = document.querySelector(".search-bar-container");
+
+  if (settingsPanel.style.display === "none") {
+    settingsPanel.style.display = "block";
+    dataContainer.style.display = "none";
+    searchBarContainer.style.display = "none";
+    loadCurrentHotkeys();
+  } else {
+    settingsPanel.style.display = "none";
+    dataContainer.style.display = "block";
+    searchBarContainer.style.display = "flex";
+  }
+}
+
+function loadCurrentHotkeys() {
+  chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
+    if (items.hotKey1 && items.hotKey2) {
+      document.getElementById("formie-key1").value = items.hotKey1;
+      document.getElementById("formie-key2").value = items.hotKey2;
+    }
+  });
+}
+
+function saveSettings() {
+  const key1 = document.getElementById("formie-key1").value;
+  const key2 = document.getElementById("formie-key2").value;
+
+  chrome.storage.local.set({ hotKey1: key1, hotKey2: key2 }, function () {
+    alert("Settings saved successfully!");
+    toggleSettings(); // Close settings panel after saving
+  });
+
+  chrome.runtime.sendMessage({ action: "updateHotkeys", hotKey1: key1, hotKey2: key2 });
+}
+
 function focusFirstElement() {
   const entries = document.querySelectorAll(".data-entry");
   if (entries.length > 0) {
@@ -99,29 +238,49 @@ function focusFirstElement() {
 
 function handleKeyPress(event) {
   const entries = document.querySelectorAll(".data-entry");
-  if (entries.length === 0) return;
+  const settingsPanel = document.getElementById("settingsPanel");
 
-  switch (event.key.toLowerCase()) {
-    case "arrowdown":
-      event.preventDefault();
-      moveFocus(1, entries);
-      break;
-    case "arrowup":
-      event.preventDefault();
-      moveFocus(-1, entries);
-      break;
-    case "c":
-      if (event.ctrlKey) {
+  if (event.ctrlKey && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    toggleSettings();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    if (settingsPanel.style.display === "block") {
+      toggleSettings();
+    }
+    return;
+  }
+
+  if (entries.length === 0 && settingsPanel.style.display === "none") return;
+
+  if (event.ctrlKey) {
+    switch (event.key.toLowerCase()) {
+      case "c":
         event.preventDefault();
         copyFocusedEntry(entries);
-      }
-      break;
-    case "d":
-      if (event.ctrlKey) {
+        break;
+      case "d":
         event.preventDefault();
         deleteFocusedEntry(entries);
+        break;
+    }
+  } else {
+    const searchBar = document.querySelector(".search-bar-container input");
+    if (searchBar !== document.activeElement) {
+      switch (event.key.toLowerCase()) {
+        case "arrowdown":
+          event.preventDefault();
+          moveFocus(1, entries);
+          break;
+        case "arrowup":
+          event.preventDefault();
+          moveFocus(-1, entries);
+          break;
       }
-      break;
+    }
   }
 }
 
@@ -177,14 +336,14 @@ function updateSidebarUI(entries, keyword) {
 
   if (entries && entries.length > 0) {
     entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
-    entries.forEach((entry) => dataEntryTemplate(entry, container));
+    entries.forEach((entry, index) => dataEntryTemplate(entry, container, index === entries.length - 1));
     focusFirstElement();
   } else {
     container.innerHTML = "<p>No data found.</p>";
   }
 }
 
-function dataEntryTemplate(entry, container) {
+function dataEntryTemplate(entry, container, isLast) {
   const div = document.createElement("div");
   div.className = "data-entry";
   const id = document.createElement("h3");
@@ -224,6 +383,10 @@ function dataEntryTemplate(entry, container) {
   };
   div.appendChild(deleteButton);
   container.appendChild(div);
+
+  if (isLast) {
+    div.classList.add("last-entry");
+  }
 }
 
 function timeSince(date) {
@@ -255,7 +418,7 @@ function timeSince(date) {
 function copyEntry(value, button) {
   navigator.clipboard.writeText(value).then(() => {
     const originalText = button.textContent;
-    button.textContent = "[Copied!]";
+    button.textContent = "Copied!";
     setTimeout(() => {
       button.textContent = originalText;
     }, 1000);
