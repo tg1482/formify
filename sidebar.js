@@ -204,6 +204,65 @@ function createSettingsPanel() {
 
   settingsPanel.appendChild(nonEditableHotkeySection);
 
+  // Add data retention strategy section
+  const dataRetentionSection = document.createElement("div");
+  dataRetentionSection.className = "data-retention-section";
+
+  const dataRetentionTitle = document.createElement("h3");
+  dataRetentionTitle.textContent = "Data Retention Strategy";
+  dataRetentionSection.appendChild(dataRetentionTitle);
+
+  const strategyContainer = document.createElement("div");
+  strategyContainer.className = "strategy-container";
+
+  const strategySelect = document.createElement("select");
+  strategySelect.id = "data-retention-strategy";
+
+  const strategies = [
+    { value: "all", text: "Keep All Data" },
+    { value: "lru", text: "LRU (Least Recently Used)" },
+  ];
+
+  strategies.forEach((strategy) => {
+    const option = document.createElement("option");
+    option.value = strategy.value;
+    option.textContent = strategy.text;
+    strategySelect.appendChild(option);
+  });
+
+  strategyContainer.appendChild(strategySelect);
+
+  const lruDaysInput = document.createElement("input");
+  lruDaysInput.type = "number";
+  lruDaysInput.id = "lru-days";
+  lruDaysInput.min = "1";
+  lruDaysInput.placeholder = "Days to keep data";
+  lruDaysInput.style.display = "none";
+
+  strategyContainer.appendChild(lruDaysInput);
+
+  const saveStrategyButton = document.createElement("button");
+  saveStrategyButton.textContent = "Save Strategy";
+  saveStrategyButton.className = "save-strategy-button";
+  saveStrategyButton.onclick = saveDataRetentionStrategy;
+
+  strategyContainer.appendChild(saveStrategyButton);
+
+  dataRetentionSection.appendChild(strategyContainer);
+
+  strategySelect.addEventListener("change", function () {
+    lruDaysInput.style.display = this.value === "lru" ? "inline-block" : "none";
+  });
+
+  // Add manual cleanup button
+  const manualCleanupButton = document.createElement("button");
+  manualCleanupButton.textContent = "Run Cleanup Now";
+  manualCleanupButton.className = "manual-cleanup-button";
+  manualCleanupButton.onclick = runManualCleanup;
+  dataRetentionSection.appendChild(manualCleanupButton);
+
+  settingsPanel.appendChild(dataRetentionSection);
+
   return settingsPanel;
 }
 
@@ -216,7 +275,7 @@ function toggleSettings() {
     settingsPanel.style.display = "block";
     dataContainer.style.display = "none";
     searchBarContainer.style.display = "none";
-    loadCurrentHotkeys();
+    loadCurrentSettings();
   } else {
     settingsPanel.style.display = "none";
     dataContainer.style.display = "block";
@@ -224,11 +283,18 @@ function toggleSettings() {
   }
 }
 
-function loadCurrentHotkeys() {
-  chrome.storage.local.get(["hotKey1", "hotKey2"], function (items) {
+function loadCurrentSettings() {
+  chrome.storage.local.get(["hotKey1", "hotKey2", "dataRetentionStrategy", "lruDays"], function (items) {
     if (items.hotKey1 && items.hotKey2) {
       document.getElementById("formie-key1").value = items.hotKey1;
       document.getElementById("formie-key2").value = items.hotKey2;
+    }
+    if (items.dataRetentionStrategy) {
+      document.getElementById("data-retention-strategy").value = items.dataRetentionStrategy;
+      document.getElementById("lru-days").style.display = items.dataRetentionStrategy === "lru" ? "block" : "none";
+    }
+    if (items.lruDays) {
+      document.getElementById("lru-days").value = items.lruDays;
     }
   });
 }
@@ -236,13 +302,60 @@ function loadCurrentHotkeys() {
 function saveSettings() {
   const key1 = document.getElementById("formie-key1").value;
   const key2 = document.getElementById("formie-key2").value;
+  const dataRetentionStrategy = document.getElementById("data-retention-strategy").value;
+  const lruDays = document.getElementById("lru-days").value;
 
-  chrome.storage.local.set({ hotKey1: key1, hotKey2: key2 }, function () {
-    alert("Settings saved successfully!");
-    toggleSettings(); // Close settings panel after saving
+  chrome.storage.local.set(
+    {
+      hotKey1: key1,
+      hotKey2: key2,
+      dataRetentionStrategy: dataRetentionStrategy,
+      lruDays: lruDays,
+    },
+    function () {
+      alert("Settings saved successfully!");
+      toggleSettings(); // Close settings panel after saving
+    }
+  );
+
+  chrome.runtime.sendMessage({
+    action: "updateSettings",
+    hotKey1: key1,
+    hotKey2: key2,
+    dataRetentionStrategy: dataRetentionStrategy,
+    lruDays: lruDays,
   });
+}
 
-  chrome.runtime.sendMessage({ action: "updateHotkeys", hotKey1: key1, hotKey2: key2 });
+function saveDataRetentionStrategy() {
+  const dataRetentionStrategy = document.getElementById("data-retention-strategy").value;
+  const lruDays = document.getElementById("lru-days").value;
+
+  chrome.storage.local.set(
+    {
+      dataRetentionStrategy: dataRetentionStrategy,
+      lruDays: lruDays,
+    },
+    function () {
+      alert("Data retention strategy saved successfully!");
+    }
+  );
+
+  chrome.runtime.sendMessage({
+    action: "updateDataRetentionStrategy",
+    dataRetentionStrategy: dataRetentionStrategy,
+    lruDays: lruDays,
+  });
+}
+
+function runManualCleanup() {
+  chrome.runtime.sendMessage({ action: "manualCleanup" }, function (response) {
+    if (response.success) {
+      alert("Manual cleanup completed successfully!");
+    } else {
+      alert("Error during manual cleanup: " + response.error);
+    }
+  });
 }
 
 function focusFirstElement() {
@@ -442,6 +555,8 @@ function dataEntryTemplate(entry, container, isLast) {
     { label: "Input Type", value: entry.data.inputType },
     { label: "Input Name", value: entry.data.inputName },
     { label: "Input ID", value: entry.data.inputId },
+    { label: "Use Count", value: entry.data.useCount },
+    { label: "Last Used", value: timeSince(entry.data.lastUsedAt) },
   ];
 
   const hasDetails = detailsInfo.some((item) => item.value);
@@ -524,6 +639,10 @@ function copyEntry(value, button) {
     setTimeout(() => {
       button.textContent = originalText;
     }, 1000);
+
+    // Update usage stats
+    const entryId = button.closest(".data-entry").querySelector("h3 strong").textContent;
+    chrome.runtime.sendMessage({ action: "updateUsageStats", id: entryId });
   });
 }
 

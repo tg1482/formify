@@ -1,11 +1,10 @@
-let db; // Add this line at the top of the file, outside any function
-
+let db;
 const dbName = "FormDataDB";
 const storeName = "entries";
 
 export function initDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(dbName, 3);
+    const request = indexedDB.open(dbName, 4); // Increment version number
 
     request.onerror = (event) => {
       console.error("Database error:", event.target.error);
@@ -14,7 +13,7 @@ export function initDB() {
 
     request.onsuccess = (event) => {
       console.log("Database opened successfully");
-      db = event.target.result; // This line should now work
+      db = event.target.result;
       resolve(db);
     };
 
@@ -23,6 +22,8 @@ export function initDB() {
       const db = event.target.result;
       const objectStore = db.createObjectStore("formData", { keyPath: "id", autoIncrement: true });
       objectStore.createIndex("createdAt", "createdAt", { unique: false });
+      objectStore.createIndex("lastUsedAt", "lastUsedAt", { unique: false });
+      objectStore.createIndex("useCount", "useCount", { unique: false });
       console.log("Object store created");
     };
   });
@@ -38,9 +39,15 @@ export function storeFormData(data) {
     const transaction = db.transaction(storeName, "readwrite");
     const store = transaction.objectStore(storeName);
 
-    // Iterate through each key-value pair in the data object
     for (const [key, value] of Object.entries(data)) {
-      const update_request = store.put({ id: cleanString(key), data: value });
+      const now = new Date().toISOString();
+      const update_request = store.put({
+        id: cleanString(key),
+        data: value,
+        createdAt: now,
+        lastUsedAt: now,
+        useCount: 0,
+      });
 
       update_request.onerror = function (event) {
         console.error("Failed to store form data for key:", key, "error:", event.target.error);
@@ -48,13 +55,77 @@ export function storeFormData(data) {
       };
     }
 
-    // Listen to transaction complete to confirm data is written
     transaction.oncomplete = function () {
       resolve();
     };
 
     transaction.onerror = function (event) {
       console.error("Transaction failed: ", event.target.error);
+      reject(event.target.error);
+    };
+  });
+}
+
+export function updateUsageStats(id) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+    const request = store.get(id);
+
+    request.onsuccess = function (event) {
+      const data = event.target.result;
+      data.lastUsedAt = new Date().toISOString();
+      data.useCount++;
+
+      const updateRequest = store.put(data);
+      updateRequest.onsuccess = function () {
+        resolve();
+      };
+      updateRequest.onerror = function (event) {
+        reject(event.target.error);
+      };
+    };
+
+    request.onerror = function (event) {
+      reject(event.target.error);
+    };
+  });
+}
+
+export function deleteOldRecords(strategy, lruDays) {
+  return new Promise((resolve, reject) => {
+    if (strategy === "all") {
+      resolve(); // No deletion needed
+      return;
+    }
+
+    const transaction = db.transaction(storeName, "readwrite");
+    const store = transaction.objectStore(storeName);
+    const request = store.openCursor();
+    const deletePromises = [];
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - lruDays);
+
+    request.onsuccess = function (event) {
+      const cursor = event.target.result;
+      if (cursor) {
+        const record = cursor.value;
+        const lastUsedDate = new Date(record.lastUsedAt);
+        if (lastUsedDate < cutoffDate) {
+          deletePromises.push(
+            new Promise((resolveDelete) => {
+              const deleteRequest = cursor.delete();
+              deleteRequest.onsuccess = resolveDelete;
+            })
+          );
+        }
+        cursor.continue();
+      } else {
+        Promise.all(deletePromises).then(resolve).catch(reject);
+      }
+    };
+
+    request.onerror = function (event) {
       reject(event.target.error);
     };
   });

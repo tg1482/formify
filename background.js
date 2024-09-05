@@ -1,4 +1,4 @@
-import { initDB, storeFormData, readAllData, searchData, deleteKey, deleteAllData } from "./db.js";
+import { initDB, storeFormData, readAllData, searchData, deleteKey, deleteAllData, updateUsageStats, deleteOldRecords } from "./db.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -11,6 +11,8 @@ chrome.runtime.onInstalled.addListener(() => {
     .then(() => {
       console.log("Database initialized successfully");
       initHotKeys();
+      initSettings();
+      setupCleanupAlarm();
     })
     .catch((error) => {
       console.error("Failed to initialize database:", error);
@@ -108,6 +110,74 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     return true;
   }
+
+  if (request.action === "updateSettings") {
+    chrome.storage.local.set(
+      {
+        hotKey1: request.hotKey1,
+        hotKey2: request.hotKey2,
+        dataRetentionStrategy: request.dataRetentionStrategy,
+        lruDays: request.lruDays,
+      },
+      function () {
+        sendResponse({ message: "Settings updated successfully" });
+      }
+    );
+    return true;
+  }
+
+  if (request.action === "updateDataRetentionStrategy") {
+    chrome.storage.local.set(
+      {
+        dataRetentionStrategy: request.dataRetentionStrategy,
+        lruDays: request.lruDays,
+      },
+      function () {
+        sendResponse({ message: "Data retention strategy updated successfully" });
+      }
+    );
+    return true;
+  }
+
+  if (request.action === "updateUsageStats") {
+    updateUsageStats(request.id)
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        console.error("Error updating usage stats:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  if (request.action === "applyDataRetentionStrategy") {
+    deleteOldRecords(request.strategy, request.lruDays)
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        console.error("Error applying data retention strategy:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  if (request.action === "manualCleanup") {
+    chrome.storage.local.get(["dataRetentionStrategy", "lruDays"], function (result) {
+      deleteOldRecords(result.dataRetentionStrategy, result.lruDays)
+        .then(() => {
+          chrome.storage.local.set({ LAST_CLEARED_AT: new Date().toISOString() });
+          sendResponse({ success: true, message: "Manual cleanup completed" });
+        })
+        .catch((error) => {
+          console.error("Error during manual cleanup:", error);
+          sendResponse({ success: false, error: error.message });
+        });
+    });
+    return true;
+  }
+
   return false;
 });
 
@@ -121,6 +191,57 @@ function initHotKeys() {
           console.log("Default hotkeys set successfully");
         }
       });
+    }
+  });
+}
+
+function initSettings() {
+  chrome.storage.local.get(["dataRetentionStrategy", "lruDays", "LAST_CLEARED_AT"], function (result) {
+    if (result.dataRetentionStrategy === undefined) {
+      chrome.storage.local.set(
+        {
+          dataRetentionStrategy: "all",
+          lruDays: 30,
+          LAST_CLEARED_AT: new Date().toISOString(),
+        },
+        function () {
+          if (chrome.runtime.lastError) {
+            console.error("Error setting default data retention strategy:", chrome.runtime.lastError);
+          } else {
+            console.log("Default data retention strategy set successfully");
+          }
+        }
+      );
+    }
+  });
+}
+
+function setupCleanupAlarm() {
+  chrome.alarms.create("dataCleanupAlarm", { periodInMinutes: 60 }); // Check every hour
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "dataCleanupAlarm") {
+    checkAndRunCleanup();
+  }
+});
+
+function checkAndRunCleanup() {
+  chrome.storage.local.get(["LAST_CLEARED_AT", "dataRetentionStrategy", "lruDays"], function (result) {
+    const lastClearedAt = new Date(result.LAST_CLEARED_AT);
+    const now = new Date();
+    const hoursSinceLastCleared = (now - lastClearedAt) / (1000 * 60 * 60);
+
+    if (hoursSinceLastCleared >= 24) {
+      console.log("Running scheduled cleanup");
+      deleteOldRecords(result.dataRetentionStrategy, result.lruDays)
+        .then(() => {
+          chrome.storage.local.set({ LAST_CLEARED_AT: now.toISOString() });
+          console.log("Scheduled cleanup completed");
+        })
+        .catch((error) => {
+          console.error("Error during scheduled cleanup:", error);
+        });
     }
   });
 }

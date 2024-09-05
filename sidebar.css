@@ -316,19 +316,23 @@ html {
   margin-bottom: 10px;
 }
 
-.hotkey-section {
-  margin-bottom: 40px; /* Increased margin */
+.hotkey-section,
+.data-retention-section {
+  margin-bottom: 40px;
   width: 100%;
 }
 
-.hotkey-container {
+.hotkey-container,
+.strategy-container {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  margin-bottom: 20px; /* Increased margin */
+  margin-bottom: 20px;
 }
 
-.hotkey-container select {
+.hotkey-container select,
+#data-retention-strategy,
+#lru-days {
   padding: 8px;
   background-color: #002b4d;
   color: #00ff00;
@@ -336,8 +340,16 @@ html {
   font-family: "VT323", monospace;
   font-size: 16px;
   margin-right: 10px;
-  flex: 1; /* Allow selects to grow */
-  max-width: 100px; /* Limit maximum width */
+  flex: 1;
+  max-width: 100px;
+}
+
+#data-retention-strategy {
+  max-width: 200px;
+}
+
+#lru-days {
+  max-width: 60px;
 }
 
 .plus-sign {
@@ -346,7 +358,8 @@ html {
   margin: 0 10px;
 }
 
-.saveButton {
+.saveButton,
+.save-strategy-button {
   padding: 8px 20px;
   background-color: #00ff00;
   color: #001933;
@@ -355,10 +368,11 @@ html {
   font-size: 16px;
   font-family: "VT323", monospace;
   transition: all 0.3s ease;
-  margin-left: 20px; /* Add space between dropdowns and button */
+  margin-left: 20px;
 }
 
-.saveButton:hover {
+.saveButton:hover,
+.save-strategy-button:hover {
   background-color: #33ff33;
 }
 
@@ -434,6 +448,7 @@ html {
   margin-left: 10px;
   padding-top: 10px;
   margin-top: 10px;
+  border-top: 1px solid #00ff00;
 }
 
 .context-container p {
@@ -517,4 +532,20 @@ html {
 .filter-button.active {
   background-color: #ffff00;
   color: #001933;
+}
+
+.manual-cleanup-button {
+  padding: 8px 20px;
+  background-color: #00ff00;
+  color: #001933;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-family: "VT323", monospace;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.manual-cleanup-button:hover {
+  background-color: #33ff33;
 }
