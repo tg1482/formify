@@ -267,7 +267,93 @@ function createSettingsPanel() {
 
   settingsPanel.appendChild(dataRetentionSection);
 
+  // Add website blacklist section
+  const websiteBlacklistSection = createBlacklistSection("Website Blacklist", "websiteBlacklist");
+  settingsPanel.appendChild(websiteBlacklistSection);
+
+  // Add title blacklist section
+  const titleBlacklistSection = createBlacklistSection("Title Blacklist", "titleBlacklist");
+  settingsPanel.appendChild(titleBlacklistSection);
+
   return settingsPanel;
+}
+
+function createBlacklistSection(title, id) {
+  const section = document.createElement("div");
+  section.className = "blacklist-section";
+
+  const sectionTitle = document.createElement("h3");
+  sectionTitle.textContent = title;
+  section.appendChild(sectionTitle);
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = `${id}Input`;
+  input.placeholder = "Enter keyword and press Enter";
+  section.appendChild(input);
+
+  const blacklistContainer = document.createElement("div");
+  blacklistContainer.id = `${id}Container`;
+  blacklistContainer.className = "blacklist-container";
+  section.appendChild(blacklistContainer);
+
+  input.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      addBlacklistItem(id, this.value);
+      this.value = "";
+    }
+  });
+
+  return section;
+}
+
+function addBlacklistItem(listId, value) {
+  if (!value.trim()) return;
+
+  const container = document.getElementById(`${listId}Container`);
+
+  // Check for duplicates
+  const existingItems = Array.from(container.querySelectorAll(".blacklist-item")).map((item) =>
+    item.textContent.slice(0, -1).toLowerCase()
+  );
+
+  if (existingItems.includes(value.toLowerCase())) {
+    return;
+  }
+
+  const item = document.createElement("div");
+  item.className = "blacklist-item";
+  item.textContent = value;
+
+  const removeButton = document.createElement("button");
+  removeButton.textContent = "X";
+  removeButton.className = "remove-blacklist-item";
+  removeButton.onclick = function () {
+    container.removeChild(item);
+    saveBlacklist(listId);
+  };
+
+  item.appendChild(removeButton);
+  container.appendChild(item);
+  saveBlacklist(listId);
+}
+
+function saveBlacklist(listId) {
+  const items = Array.from(document.querySelectorAll(`#${listId}Container .blacklist-item`)).map((item) => item.textContent.slice(0, -1)); // Remove the 'X' from the text
+  chrome.storage.local.set({ [listId]: items }, function () {
+    console.log(`${listId} saved:`, items);
+  });
+}
+
+function loadBlacklists() {
+  chrome.storage.local.get(["websiteBlacklist", "titleBlacklist"], function (result) {
+    if (result.websiteBlacklist) {
+      result.websiteBlacklist.forEach((item) => addBlacklistItem("websiteBlacklist", item));
+    }
+    if (result.titleBlacklist) {
+      result.titleBlacklist.forEach((item) => addBlacklistItem("titleBlacklist", item));
+    }
+  });
 }
 
 function toggleSettings() {
@@ -300,6 +386,7 @@ function loadCurrentSettings() {
     if (items.lruDays) {
       document.getElementById("lru-days").value = items.lruDays;
     }
+    loadBlacklists();
   });
 }
 

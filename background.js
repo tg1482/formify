@@ -71,15 +71,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "saveData") {
-    storeFormData(request.entries)
-      .then(() => {
-        chrome.runtime.sendMessage({ action: "refreshData" });
-        respond({ message: "Data saved successfully" });
-      })
-      .catch((error) => {
-        console.error("Error storing form data:", error);
-        respond({ message: "Error saving data", error: error.message });
+    chrome.storage.local.get(["websiteBlacklist", "titleBlacklist"], function (result) {
+      const websiteBlacklist = result.websiteBlacklist || [];
+      const titleBlacklist = result.titleBlacklist || [];
+
+      const filteredEntries = Object.entries(request.entries).filter(([key, value]) => {
+        const url = value.url.toLowerCase();
+        const title = key.toLowerCase();
+
+        const isWebsiteBlacklisted = websiteBlacklist.some((item) => url.includes(item.toLowerCase()));
+        const isTitleBlacklisted = titleBlacklist.some((item) => title.includes(item.toLowerCase()));
+
+        return !isWebsiteBlacklisted && !isTitleBlacklisted;
       });
+
+      const filteredData = Object.fromEntries(filteredEntries);
+
+      storeFormData(filteredData)
+        .then(() => {
+          chrome.runtime.sendMessage({ action: "refreshData" });
+          respond({ message: "Data saved successfully" });
+        })
+        .catch((error) => {
+          console.error("Error storing form data:", error);
+          respond({ message: "Error saving data", error: error.message });
+        });
+    });
     return true; // Indicates that the response is asynchronous
   }
 
