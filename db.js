@@ -4,7 +4,7 @@ const storeName = "entries";
 
 export function initDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(dbName, 4); // Increment version number
+    const request = indexedDB.open(dbName, 5); // Keep the version number
 
     request.onerror = (event) => {
       console.error("Database error:", event.target.error);
@@ -20,11 +20,16 @@ export function initDB() {
     request.onupgradeneeded = (event) => {
       console.log("Database upgrade needed");
       const db = event.target.result;
-      const objectStore = db.createObjectStore("formData", { keyPath: "id", autoIncrement: true });
-      objectStore.createIndex("createdAt", "createdAt", { unique: false });
-      objectStore.createIndex("lastUsedAt", "lastUsedAt", { unique: false });
-      objectStore.createIndex("useCount", "useCount", { unique: false });
-      console.log("Object store created");
+
+      if (!db.objectStoreNames.contains("formData")) {
+        const objectStore = db.createObjectStore("formData", { keyPath: "id", autoIncrement: true });
+        objectStore.createIndex("createdAt", "createdAt", { unique: false });
+        objectStore.createIndex("lastUsedAt", "lastUsedAt", { unique: false });
+        objectStore.createIndex("useCount", "useCount", { unique: false });
+        console.log("Object store created");
+      } else {
+        console.log("Object store already exists");
+      }
     };
   });
 }
@@ -44,9 +49,9 @@ export function storeFormData(data) {
       const update_request = store.put({
         id: cleanString(key),
         data: value,
-        createdAt: now,
-        lastUsedAt: now,
-        useCount: 0,
+        createdAt: value.createdAt || now,
+        lastUsedAt: value.lastUsedAt || now,
+        useCount: value.useCount || 0,
       });
 
       update_request.onerror = function (event) {
@@ -68,26 +73,35 @@ export function storeFormData(data) {
 
 export function updateUsageStats(id) {
   return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error("Database not initialized"));
+      return;
+    }
+
     const transaction = db.transaction(storeName, "readwrite");
     const store = transaction.objectStore(storeName);
     const request = store.get(id);
 
     request.onsuccess = function (event) {
       const data = event.target.result;
-      data.lastUsedAt = new Date().toISOString();
-      data.useCount++;
+      if (data) {
+        data.lastUsedAt = new Date().toISOString();
+        data.useCount = (data.useCount || 0) + 1;
 
-      const updateRequest = store.put(data);
-      updateRequest.onsuccess = function () {
-        resolve();
-      };
-      updateRequest.onerror = function (event) {
-        reject(event.target.error);
-      };
+        const updateRequest = store.put(data);
+        updateRequest.onsuccess = function () {
+          resolve({ success: true });
+        };
+        updateRequest.onerror = function (event) {
+          reject({ success: false, error: event.target.error });
+        };
+      } else {
+        reject({ success: false, error: "Entry not found" });
+      }
     };
 
     request.onerror = function (event) {
-      reject(event.target.error);
+      reject({ success: false, error: event.target.error });
     };
   });
 }
@@ -95,40 +109,62 @@ export function updateUsageStats(id) {
 export function deleteOldRecords(strategy, lruDays) {
   return new Promise((resolve, reject) => {
     if (strategy === "all") {
-      resolve(); // No deletion needed
+      resolve(0); // No deletion needed
       return;
     }
 
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
-    const request = store.openCursor();
-    const deletePromises = [];
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - lruDays);
-
-    request.onsuccess = function (event) {
-      const cursor = event.target.result;
-      if (cursor) {
-        const record = cursor.value;
-        const lastUsedDate = new Date(record.lastUsedAt);
-        if (lastUsedDate < cutoffDate) {
-          deletePromises.push(
-            new Promise((resolveDelete) => {
-              const deleteRequest = cursor.delete();
-              deleteRequest.onsuccess = resolveDelete;
-            })
-          );
-        }
-        cursor.continue();
-      } else {
-        Promise.all(deletePromises).then(resolve).catch(reject);
-      }
-    };
-
-    request.onerror = function (event) {
-      reject(event.target.error);
-    };
+    if (!db) {
+      initDB()
+        .then(() => {
+          performDeletion(strategy, lruDays, resolve, reject);
+        })
+        .catch(reject);
+    } else {
+      performDeletion(strategy, lruDays, resolve, reject);
+    }
   });
+}
+
+function performDeletion(strategy, lruDays, resolve, reject) {
+  const transaction = db.transaction(storeName, "readwrite");
+  const store = transaction.objectStore(storeName);
+  const request = store.openCursor();
+  const deletePromises = [];
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - lruDays);
+  let deletedCount = 0;
+
+  request.onsuccess = function (event) {
+    const cursor = event.target.result;
+    if (cursor) {
+      const record = cursor.value;
+      const lastUsedDate = new Date(record.lastUsedAt);
+      const createdDate = new Date(record.createdAt);
+
+      // Use createdAt if lastUsedAt is invalid
+      const dateToCompare = isNaN(lastUsedDate.getTime()) ? createdDate : lastUsedDate;
+      if (dateToCompare < cutoffDate) {
+        deletePromises.push(
+          new Promise((resolveDelete) => {
+            const deleteRequest = cursor.delete();
+            deleteRequest.onsuccess = () => {
+              deletedCount++;
+              resolveDelete();
+            };
+          })
+        );
+      }
+      cursor.continue();
+    } else {
+      Promise.all(deletePromises)
+        .then(() => resolve(deletedCount))
+        .catch(reject);
+    }
+  };
+
+  request.onerror = function (event) {
+    reject(event.target.error);
+  };
 }
 
 export function readData(key) {

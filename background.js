@@ -44,9 +44,17 @@ chrome.runtime.onConnect.addListener(function (port) {
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  const respond = (response) => {
+    if (chrome.runtime.lastError) {
+      console.warn("Failed to send response:", chrome.runtime.lastError);
+    } else {
+      sendResponse(response);
+    }
+  };
+
   if (request.action === "fetchData") {
     readAllData().then((entries) => {
-      sendResponse({ entries: entries });
+      respond({ entries: entries });
     });
     return true;
   }
@@ -58,7 +66,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else {
       chrome.sidePanel.open({ tabId: sender.tab.id });
     }
-    sendResponse({ message: sidePanelOpen ? "Sidebar closed" : "Sidebar opened" });
+    respond({ message: sidePanelOpen ? "Sidebar closed" : "Sidebar opened" });
     return true;
   }
 
@@ -66,11 +74,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     storeFormData(request.entries)
       .then(() => {
         chrome.runtime.sendMessage({ action: "refreshData" });
-        sendResponse({ message: "Data saved successfully" });
+        respond({ message: "Data saved successfully" });
       })
       .catch((error) => {
         console.error("Error storing form data:", error);
-        sendResponse({ message: "Error saving data", error: error.message });
+        respond({ message: "Error saving data", error: error.message });
       });
     return true; // Indicates that the response is asynchronous
   }
@@ -80,7 +88,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const filters = request.filters || [];
     const currentHostname = request.currentHostname;
     searchData(keyword, filters, currentHostname).then((result) => {
-      sendResponse({ entries: result.filteredData, totalCount: result.totalCount });
+      respond({ entries: result.filteredData, totalCount: result.totalCount });
     });
     return true; // Indicates an asynchronous response
   }
@@ -88,13 +96,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "deleteKey") {
     const key = request.id;
     deleteKey(key);
-    sendResponse({ message: "Data deleted successfully" });
+    respond({ message: "Data deleted successfully" });
     return true;
   }
 
   if (request.action === "updateHotkeys") {
     chrome.storage.local.set({ hotKey1: request.hotKey1, hotKey2: request.hotKey2 }, function () {
-      sendResponse({ message: "Hotkeys updated successfully" });
+      respond({ message: "Hotkeys updated successfully" });
     });
     return true;
   }
@@ -102,11 +110,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "deleteAllData") {
     deleteAllData()
       .then(() => {
-        sendResponse({ message: "All data deleted successfully" });
+        respond({ message: "All data deleted successfully" });
       })
       .catch((error) => {
         console.error("Error deleting all data:", error);
-        sendResponse({ message: "Error deleting all data" });
+        respond({ message: "Error deleting all data" });
       });
     return true;
   }
@@ -120,7 +128,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         lruDays: request.lruDays,
       },
       function () {
-        sendResponse({ message: "Settings updated successfully" });
+        respond({ message: "Settings updated successfully" });
       }
     );
     return true;
@@ -133,7 +141,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         lruDays: request.lruDays,
       },
       function () {
-        sendResponse({ message: "Data retention strategy updated successfully" });
+        respond({ message: "Data retention strategy updated successfully" });
       }
     );
     return true;
@@ -141,12 +149,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "updateUsageStats") {
     updateUsageStats(request.id)
-      .then(() => {
-        sendResponse({ success: true });
+      .then((result) => {
+        respond(result);
       })
       .catch((error) => {
         console.error("Error updating usage stats:", error);
-        sendResponse({ success: false, error: error.message });
+        respond({ success: false, error: error.message });
       });
     return true;
   }
@@ -154,11 +162,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "applyDataRetentionStrategy") {
     deleteOldRecords(request.strategy, request.lruDays)
       .then(() => {
-        sendResponse({ success: true });
+        respond({ success: true });
       })
       .catch((error) => {
         console.error("Error applying data retention strategy:", error);
-        sendResponse({ success: false, error: error.message });
+        respond({ success: false, error: error.message });
       });
     return true;
   }
@@ -166,13 +174,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "manualCleanup") {
     chrome.storage.local.get(["dataRetentionStrategy", "lruDays"], function (result) {
       deleteOldRecords(result.dataRetentionStrategy, result.lruDays)
-        .then(() => {
+        .then((deletedCount) => {
           chrome.storage.local.set({ LAST_CLEARED_AT: new Date().toISOString() });
-          sendResponse({ success: true, message: "Manual cleanup completed" });
+          respond({ success: true, message: "Manual cleanup completed", deletedCount: deletedCount });
         })
         .catch((error) => {
           console.error("Error during manual cleanup:", error);
-          sendResponse({ success: false, error: error.message });
+          respond({ success: false, error: error.message });
         });
     });
     return true;
@@ -217,14 +225,19 @@ function initSettings() {
 }
 
 function setupCleanupAlarm() {
-  chrome.alarms.create("dataCleanupAlarm", { periodInMinutes: 60 }); // Check every hour
-}
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "dataCleanupAlarm") {
-    checkAndRunCleanup();
+  if (chrome.alarms) {
+    chrome.alarms.create("dataCleanupAlarm", { periodInMinutes: 60 }); // Check every hour
+    chrome.alarms.onAlarm.addListener((alarm) => {
+      if (alarm.name === "dataCleanupAlarm") {
+        checkAndRunCleanup();
+      }
+    });
+  } else {
+    console.log("Alarms API not available. Scheduled cleanup will run every hour");
+    setInterval(checkAndRunCleanup, 60 * 60 * 1000); // Run every hour
+    // Optionally, you could set up a less precise interval here using setInterval
   }
-});
+}
 
 function checkAndRunCleanup() {
   chrome.storage.local.get(["LAST_CLEARED_AT", "dataRetentionStrategy", "lruDays"], function (result) {

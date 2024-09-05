@@ -246,7 +246,7 @@ function createSettingsPanel() {
   strategyContainer.appendChild(lruDaysInput);
 
   const saveStrategyButton = document.createElement("button");
-  saveStrategyButton.textContent = "Save Strategy";
+  saveStrategyButton.textContent = "Save";
   saveStrategyButton.className = "save-strategy-button";
   saveStrategyButton.onclick = saveDataRetentionStrategy;
 
@@ -355,7 +355,8 @@ function saveDataRetentionStrategy() {
 function runManualCleanup() {
   chrome.runtime.sendMessage({ action: "manualCleanup" }, function (response) {
     if (response.success) {
-      alert("Manual cleanup completed successfully!");
+      alert(`Manual cleanup completed successfully! ${response.deletedCount} record(s) deleted.`);
+      fetchDataFromDB("all"); // Reload the data
     } else {
       alert("Error during manual cleanup: " + response.error);
     }
@@ -471,7 +472,6 @@ function fetchDataFromDB(keyword, filters = []) {
         currentHostname = currentUrl.hostname;
       } catch (error) {
         console.error("Error parsing URL:", error);
-        // If URL parsing fails, we'll just use an empty string for hostname
       }
     }
 
@@ -563,8 +563,8 @@ function dataEntryTemplate(entry, container, isLast) {
     { label: "Input Type", value: entry.data.inputType },
     { label: "Input Name", value: entry.data.inputName },
     { label: "Input ID", value: entry.data.inputId },
-    { label: "Use Count", value: entry.data.useCount },
-    { label: "Last Used", value: timeSince(entry.data.lastUsedAt) },
+    { label: "Use Count", value: entry.useCount },
+    { label: "Last Used", value: timeSince(entry.lastUsedAt) },
   ];
 
   const hasDetails = detailsInfo.some((item) => item.value);
@@ -650,7 +650,13 @@ function copyEntry(value, button) {
 
     // Update usage stats
     const entryId = button.closest(".data-entry").querySelector("h3 strong").textContent;
-    chrome.runtime.sendMessage({ action: "updateUsageStats", id: entryId });
+    chrome.runtime.sendMessage({ action: "updateUsageStats", id: entryId }, (response) => {
+      if (response.success) {
+        console.log("Usage stats updated successfully");
+      } else {
+        console.error("Failed to update usage stats:", response.error);
+      }
+    });
   });
 }
 
