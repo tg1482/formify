@@ -10,33 +10,62 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       const searchbar = document.querySelector(".search-bar-container input");
       fetchDataFromDB(searchbar.value || "all");
       break;
+    case "textSelected":
+      handleTextSelection(message.selectedText);
+      break;
     default:
       console.warn("Unhandled message action:", message.action);
   }
   return true;
 });
 
+function handleTextSelection(selectedText) {
+  const searchbar = document.querySelector(".search-bar-container input");
+  searchbar.value = selectedText;
+  fetchDataFromDB(selectedText);
+}
+
 let focusedIndex = -1;
 
 function addCustomSidebar() {
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = chrome.runtime.getURL("content.css");
-  document.head.appendChild(link);
+  const sidebar = createSidebarElement();
+  document.body.appendChild(sidebar);
 
+  addEventListeners();
+  focusFirstElement();
+}
+
+function createSidebarElement() {
   const sidebar = document.createElement("div");
   sidebar.id = "formie-sidebar";
 
+  sidebar.appendChild(createHeader());
+  sidebar.appendChild(createContentPrevious());
+  sidebar.appendChild(createBottomBar());
+  sidebar.appendChild(createSettingsPanel());
+
+  return sidebar;
+}
+
+function createHeader() {
   const header = document.createElement("h1");
   header.textContent = "Formie Data";
-  sidebar.appendChild(header);
+  return header;
+}
 
+function createContentPrevious() {
   const contentPrevious = document.createElement("div");
   contentPrevious.id = "contentPrevious";
 
-  const countDisplay = createCountDisplay();
-  contentPrevious.appendChild(countDisplay);
+  contentPrevious.appendChild(createCountDisplay());
+  contentPrevious.appendChild(createSearchBar());
+  contentPrevious.appendChild(createFilterContainer());
+  contentPrevious.appendChild(createDataContainer());
 
+  return contentPrevious;
+}
+
+function createSearchBar() {
   const searchBarContainer = document.createElement("div");
   searchBarContainer.className = "search-bar-container";
   const searchBar = document.createElement("input");
@@ -46,15 +75,14 @@ function addCustomSidebar() {
   let searchTimeout;
   searchBar.addEventListener("input", (e) => {
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      applyFiltersAndSearch();
-    }, 300); // 300ms delay
+    searchTimeout = setTimeout(applyFiltersAndSearch, 300);
   });
 
   searchBarContainer.appendChild(searchBar);
-  contentPrevious.appendChild(searchBarContainer);
+  return searchBarContainer;
+}
 
-  // Add filter buttons
+function createFilterContainer() {
   const filterContainer = document.createElement("div");
   filterContainer.className = "filter-container";
   const filterButtons = [
@@ -73,16 +101,26 @@ function addCustomSidebar() {
     filterContainer.appendChild(filterButton);
   });
 
-  contentPrevious.appendChild(filterContainer);
+  return filterContainer;
+}
 
+function createDataContainer() {
   const dataContainer = document.createElement("div");
   dataContainer.id = "dataContainer";
-  contentPrevious.appendChild(dataContainer);
-  sidebar.appendChild(contentPrevious);
+  return dataContainer;
+}
 
+function createBottomBar() {
   const bottomBar = document.createElement("div");
   bottomBar.id = "bottomBar";
 
+  bottomBar.appendChild(createDeleteAllButton());
+  bottomBar.appendChild(createSettingsButton());
+
+  return bottomBar;
+}
+
+function createDeleteAllButton() {
   const deleteAllButton = document.createElement("button");
   deleteAllButton.innerHTML = "☠ Delete All";
   deleteAllButton.id = "deleteAllButton";
@@ -93,31 +131,15 @@ function addCustomSidebar() {
       });
     }
   };
+  return deleteAllButton;
+}
 
+function createSettingsButton() {
   const settingsButton = document.createElement("button");
   settingsButton.innerHTML = "⚙ Settings";
   settingsButton.id = "settingsButton";
   settingsButton.onclick = toggleSettings;
-
-  bottomBar.appendChild(deleteAllButton);
-  bottomBar.appendChild(settingsButton);
-  sidebar.appendChild(bottomBar);
-
-  // Add settings panel
-  const settingsPanel = createSettingsPanel();
-  sidebar.appendChild(settingsPanel);
-
-  document.body.appendChild(sidebar);
-
-  // Add event listener for keydown events
-  document.addEventListener("keydown", handleKeyPress);
-
-  // Focus on the first element when the sidebar is opened
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "sidebarOpened") {
-      focusFirstElement();
-    }
-  });
+  return settingsButton;
 }
 
 function createSettingsPanel() {
@@ -125,11 +147,31 @@ function createSettingsPanel() {
   settingsPanel.id = "settingsPanel";
   settingsPanel.style.display = "none";
 
+  settingsPanel.appendChild(createSettingsTitle());
+  settingsPanel.appendChild(createBackButton());
+  settingsPanel.appendChild(createEditableHotkeySection());
+  settingsPanel.appendChild(createNonEditableHotkeySection());
+  settingsPanel.appendChild(createDataRetentionSection());
+  settingsPanel.appendChild(createWebsiteBlacklistSection());
+  settingsPanel.appendChild(createTitleBlacklistSection());
+
+  return settingsPanel;
+}
+
+function createSettingsTitle() {
   const title = document.createElement("h2");
   title.textContent = "Settings";
-  settingsPanel.appendChild(title);
+  return title;
+}
 
-  // Editable hotkey section
+function createBackButton() {
+  const backButton = document.createElement("button");
+  backButton.id = "backButton";
+  backButton.onclick = toggleSettings;
+  return backButton;
+}
+
+function createEditableHotkeySection() {
   const editableHotkeySection = document.createElement("div");
   editableHotkeySection.className = "hotkey-section";
 
@@ -175,20 +217,16 @@ function createSettingsPanel() {
 
   editableHotkeySection.appendChild(hotkeyContainer);
 
-  settingsPanel.appendChild(editableHotkeySection);
+  return editableHotkeySection;
+}
 
-  // Non-editable hotkeys section
+function createNonEditableHotkeySection() {
   const nonEditableHotkeySection = document.createElement("div");
   nonEditableHotkeySection.className = "hotkey-section";
 
   const nonEditableTitle = document.createElement("h3");
   nonEditableTitle.textContent = "Other Hotkeys";
   nonEditableHotkeySection.appendChild(nonEditableTitle);
-
-  const backButton = document.createElement("button");
-  backButton.id = "backButton";
-  backButton.onclick = toggleSettings;
-  settingsPanel.insertBefore(backButton, settingsPanel.firstChild);
 
   const hotkeys = [
     { keys: "Ctrl + S", description: "Toggle settings panel" },
@@ -206,9 +244,10 @@ function createSettingsPanel() {
     nonEditableHotkeySection.appendChild(hotkeyDiv);
   });
 
-  settingsPanel.appendChild(nonEditableHotkeySection);
+  return nonEditableHotkeySection;
+}
 
-  // Add data retention strategy section
+function createDataRetentionSection() {
   const dataRetentionSection = document.createElement("div");
   dataRetentionSection.className = "data-retention-section";
 
@@ -265,17 +304,15 @@ function createSettingsPanel() {
   manualCleanupButton.onclick = runManualCleanup;
   dataRetentionSection.appendChild(manualCleanupButton);
 
-  settingsPanel.appendChild(dataRetentionSection);
+  return dataRetentionSection;
+}
 
-  // Add website blacklist section
-  const websiteBlacklistSection = createBlacklistSection("Website Blacklist", "websiteBlacklist");
-  settingsPanel.appendChild(websiteBlacklistSection);
+function createWebsiteBlacklistSection() {
+  return createBlacklistSection("Website Blacklist", "websiteBlacklist");
+}
 
-  // Add title blacklist section
-  const titleBlacklistSection = createBlacklistSection("Title Blacklist", "titleBlacklist");
-  settingsPanel.appendChild(titleBlacklistSection);
-
-  return settingsPanel;
+function createTitleBlacklistSection() {
+  return createBlacklistSection("Title Blacklist", "titleBlacklist");
 }
 
 function createBlacklistSection(title, id) {
@@ -595,7 +632,10 @@ function updateSidebarUI(entries, keyword, totalCount) {
     entries.forEach((entry, index) => dataEntryTemplate(entry, container, index === entries.length - 1));
     focusFirstElement();
   } else {
-    container.innerHTML = "<p>No data found.</p>";
+    const noDataMessage = document.createElement("p");
+    noDataMessage.textContent = "No data found.";
+    noDataMessage.id = "no-data-message";
+    container.appendChild(noDataMessage);
   }
 }
 
@@ -752,6 +792,15 @@ function createCountDisplay() {
   countDisplay.id = "count-display";
   countDisplay.className = "count-display";
   return countDisplay;
+}
+
+function addEventListeners() {
+  document.addEventListener("keydown", handleKeyPress);
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "sidebarOpened") {
+      focusFirstElement();
+    }
+  });
 }
 
 addCustomSidebar();

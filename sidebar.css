@@ -98,6 +98,7 @@ html {
   font-family: "VT323", monospace;
   font-size: 18px;
   outline: none;
+  color: #ffff00; /* Changed to yellow */
 }
 
 .search-bar-container input[type="text"]:focus {
@@ -112,6 +113,12 @@ html {
   margin-right: 10px;
   background-color: #002b4d;
   position: relative;
+}
+
+#no-data-message {
+  margin: 20px;
+  text-align: center;
+  color: #666;
 }
 
 .resize-handle {

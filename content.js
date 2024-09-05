@@ -5,7 +5,7 @@ function handleTextSelection() {
 
   if (selectedText.length > 2) {
     try {
-      chrome.runtime.sendMessage({ action: "searchData", keyword: selectedText });
+      chrome.runtime.sendMessage({ action: "textSelected", selectedText: selectedText });
     } catch (error) {
       console.error("Error sending message:", error);
     }
