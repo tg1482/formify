@@ -43,12 +43,33 @@ function addCustomSidebar() {
   searchBar.addEventListener("input", (e) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      fetchDataFromDB(e.target.value || "all");
+      applyFiltersAndSearch();
     }, 300); // 300ms delay
   });
 
   searchBarContainer.appendChild(searchBar);
   contentPrevious.appendChild(searchBarContainer);
+
+  // Add filter buttons
+  const filterContainer = document.createElement("div");
+  filterContainer.className = "filter-container";
+  const filterButtons = [
+    { id: "thisSite", text: "This Site" },
+    { id: "last60Mins", text: "Last 60 mins" },
+    { id: "today", text: "Today" },
+    { id: "thisWeek", text: "This Week" },
+  ];
+
+  filterButtons.forEach((button) => {
+    const filterButton = document.createElement("button");
+    filterButton.id = button.id;
+    filterButton.textContent = button.text;
+    filterButton.className = "filter-button";
+    filterButton.addEventListener("click", () => toggleFilter(filterButton));
+    filterContainer.appendChild(filterButton);
+  });
+
+  contentPrevious.appendChild(filterContainer);
 
   const dataContainer = document.createElement("div");
   dataContainer.id = "dataContainer";
@@ -312,15 +333,45 @@ function deleteFocusedEntry(entries) {
   });
 }
 
-function fetchDataFromDB(keyword) {
-  const message = keyword === "all" ? { action: "fetchData" } : { action: "searchData", keyword: keyword };
+function toggleFilter(button) {
+  button.classList.toggle("active");
+  applyFiltersAndSearch();
+}
 
-  chrome.runtime.sendMessage(message, (response) => {
-    if (chrome.runtime.lastError) {
-      console.error("Error fetching data:", chrome.runtime.lastError);
-      return;
+function applyFiltersAndSearch() {
+  const searchTerm = document.querySelector(".search-bar-container input").value;
+  const activeFilters = Array.from(document.querySelectorAll(".filter-button.active")).map((btn) => btn.id);
+
+  fetchDataFromDB(searchTerm, activeFilters);
+}
+
+function fetchDataFromDB(keyword, filters = []) {
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    let currentHostname = "";
+    if (tabs && tabs[0] && tabs[0].url) {
+      try {
+        const currentUrl = new URL(tabs[0].url);
+        currentHostname = currentUrl.hostname;
+      } catch (error) {
+        console.error("Error parsing URL:", error);
+        // If URL parsing fails, we'll just use an empty string for hostname
+      }
     }
-    updateSidebarUI(response.entries, keyword);
+
+    const message = {
+      action: "searchData",
+      keyword: keyword || "all",
+      filters: filters,
+      currentHostname: currentHostname,
+    };
+
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error fetching data:", chrome.runtime.lastError);
+        return;
+      }
+      updateSidebarUI(response.entries, keyword);
+    });
   });
 }
 
@@ -356,7 +407,7 @@ function dataEntryTemplate(entry, container, isLast) {
   valueContainer.appendChild(copyButton);
 
   const value = document.createElement("p");
-  value.className = "main-entry";
+  value.id = "main-entry";
   value.innerHTML = `"${entry.data.value}"`;
   valueContainer.appendChild(value);
   div.appendChild(valueContainer);

@@ -110,7 +110,7 @@ export function readAllData() {
   });
 }
 
-export function searchData(keyword) {
+export function searchData(keyword, filters = [], currentHostname) {
   return new Promise((resolve, reject) => {
     const open_request = indexedDB.open(dbName);
     const filteredData = [];
@@ -124,18 +124,8 @@ export function searchData(keyword) {
         const cursor = event.target.result;
         if (cursor) {
           const entry = cursor.value;
-          const searchableFields = [
-            { field: "id", value: entry.id },
-            { field: "value", value: entry.data.value },
-            { field: "pageHeader", value: entry.data.pageHeader },
-            { field: "url", value: entry.data.url },
-            { field: "domain", value: entry.data.domain },
-          ];
-
-          const matchIndex = searchableFields.findIndex((item) => item.value && item.value.toLowerCase().includes(keyword.toLowerCase()));
-
-          if (matchIndex !== -1) {
-            filteredData.push({ ...entry, matchPriority: matchIndex });
+          if (matchesFilters(entry, filters, currentHostname) && matchesKeyword(entry, keyword)) {
+            filteredData.push(entry);
           }
           cursor.continue();
         } else {
@@ -148,12 +138,7 @@ export function searchData(keyword) {
             return a.id.toLowerCase().localeCompare(b.id.toLowerCase());
           });
 
-          resolve(
-            filteredData.map((item) => {
-              const { matchPriority, ...rest } = item;
-              return rest;
-            })
-          );
+          resolve(filteredData);
         }
       };
 
@@ -234,4 +219,41 @@ function toSentenceCase(str) {
 
 function cleanString(str) {
   return toSentenceCase(str.trim().replace(/^[^\w]+|[^\w]+$/g, ""));
+}
+
+function matchesFilters(entry, filters, currentHostname) {
+  if (filters.length === 0) return true;
+
+  const now = new Date();
+  const entryDate = new Date(entry.data.createdAt);
+
+  return filters.every((filter) => {
+    switch (filter) {
+      case "thisSite":
+        return (entry.data.domain || new URL(entry.data.url).hostname) === currentHostname;
+      case "last60Mins":
+        return now - entryDate <= 60 * 60 * 1000;
+      case "today":
+        return entryDate.toDateString() === now.toDateString();
+      case "thisWeek":
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return entryDate >= weekAgo;
+      default:
+        return true;
+    }
+  });
+}
+
+function matchesKeyword(entry, keyword) {
+  if (keyword === "all") return true;
+
+  const searchableFields = [
+    { field: "id", value: entry.id },
+    { field: "value", value: entry.data.value },
+    { field: "pageHeader", value: entry.data.pageHeader },
+    { field: "url", value: entry.data.url },
+    { field: "domain", value: entry.data.domain },
+  ];
+
+  return searchableFields.some((item) => item.value && item.value.toLowerCase().includes(keyword.toLowerCase()));
 }
