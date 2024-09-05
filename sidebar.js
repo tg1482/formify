@@ -149,11 +149,11 @@ function createSettingsPanel() {
 
   settingsPanel.appendChild(createSettingsTitle());
   settingsPanel.appendChild(createBackButton());
-  settingsPanel.appendChild(createEditableHotkeySection());
-  settingsPanel.appendChild(createNonEditableHotkeySection());
   settingsPanel.appendChild(createDataRetentionSection());
   settingsPanel.appendChild(createWebsiteBlacklistSection());
   settingsPanel.appendChild(createTitleBlacklistSection());
+  settingsPanel.appendChild(createEditableHotkeySection());
+  settingsPanel.appendChild(createNonEditableHotkeySection());
 
   return settingsPanel;
 }
