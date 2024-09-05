@@ -549,3 +549,10 @@ html {
 .manual-cleanup-button:hover {
   background-color: #33ff33;
 }
+
+.count-display {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #33ccff;
+  font-size: 14px;
+}

@@ -79,8 +79,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const keyword = request.keyword;
     const filters = request.filters || [];
     const currentHostname = request.currentHostname;
-    searchData(keyword, filters, currentHostname).then((filteredData) => {
-      sendResponse({ entries: filteredData });
+    searchData(keyword, filters, currentHostname).then((result) => {
+      sendResponse({ entries: result.filteredData, totalCount: result.totalCount });
     });
     return true; // Indicates an asynchronous response
   }

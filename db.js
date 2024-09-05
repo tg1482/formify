@@ -185,6 +185,8 @@ export function searchData(keyword, filters = [], currentHostname) {
   return new Promise((resolve, reject) => {
     const open_request = indexedDB.open(dbName);
     const filteredData = [];
+    let totalCount = 0;
+
     open_request.onsuccess = function (event) {
       const db = event.target.result;
       const transaction = db.transaction(storeName, "readonly");
@@ -194,6 +196,7 @@ export function searchData(keyword, filters = [], currentHostname) {
       cursor_request.onsuccess = function (event) {
         const cursor = event.target.result;
         if (cursor) {
+          totalCount++;
           const entry = cursor.value;
           if (matchesFilters(entry, filters, currentHostname) && matchesKeyword(entry, keyword)) {
             filteredData.push(entry);
@@ -209,7 +212,7 @@ export function searchData(keyword, filters = [], currentHostname) {
             return a.id.toLowerCase().localeCompare(b.id.toLowerCase());
           });
 
-          resolve(filteredData);
+          resolve({ filteredData, totalCount });
         }
       };
 

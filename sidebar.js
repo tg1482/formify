@@ -1,7 +1,7 @@
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   switch (message.action) {
     case "displayData":
-      updateSidebarUI(message.entries, message.keyword);
+      updateSidebarUI(message.entries, message.keyword, message.totalCount);
       break;
     case "closeSidebar":
       window.close();
@@ -33,6 +33,10 @@ function addCustomSidebar() {
 
   const contentPrevious = document.createElement("div");
   contentPrevious.id = "contentPrevious";
+
+  const countDisplay = createCountDisplay();
+  contentPrevious.appendChild(countDisplay);
+
   const searchBarContainer = document.createElement("div");
   searchBarContainer.className = "search-bar-container";
   const searchBar = document.createElement("input");
@@ -483,17 +487,21 @@ function fetchDataFromDB(keyword, filters = []) {
         console.error("Error fetching data:", chrome.runtime.lastError);
         return;
       }
-      updateSidebarUI(response.entries, keyword);
+      updateSidebarUI(response.entries, keyword, response.totalCount);
     });
   });
 }
 
-function updateSidebarUI(entries, keyword) {
+function updateSidebarUI(entries, keyword, totalCount) {
   const container = document.getElementById("dataContainer");
   container.innerHTML = "";
 
   const searchbar = document.querySelector(".search-bar-container input");
   searchbar.value = keyword === "all" ? "" : keyword;
+
+  // Update count display
+  const countDisplay = document.getElementById("count-display");
+  countDisplay.textContent = `Showing ${entries.length} of ${totalCount} results`;
 
   if (entries && entries.length > 0) {
     entries.sort((a, b) => new Date(b.data.createdAt) - new Date(a.data.createdAt));
@@ -644,6 +652,13 @@ function copyEntry(value, button) {
     const entryId = button.closest(".data-entry").querySelector("h3 strong").textContent;
     chrome.runtime.sendMessage({ action: "updateUsageStats", id: entryId });
   });
+}
+
+function createCountDisplay() {
+  const countDisplay = document.createElement("div");
+  countDisplay.id = "count-display";
+  countDisplay.className = "count-display";
+  return countDisplay;
 }
 
 addCustomSidebar();
