@@ -218,6 +218,11 @@ html {
   padding: 10px;
   border-radius: 3px;
   margin-bottom: 10px;
+  text-align: center;
+  width: 90%;
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .delete-button {
@@ -427,6 +432,8 @@ html {
   text-align: left;
   align-items: flex-start;
   margin-left: 10px;
+  padding-top: 10px;
+  margin-top: 10px;
 }
 
 .context-container p {
