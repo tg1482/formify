@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Formie",
-  "version": "1.1",
+  "version": "2.0",
   "description": "Copilot for filling forms",
   "permissions": ["storage", "contextMenus", "sidePanel", "tabs", "alarms"],
   "background": {
@@ -20,7 +20,7 @@
   },
   "action": {
     "default_icon": "icons/formie.png",
-    "default_title": "Form Data"
+    "default_title": "Formify"
   },
   "side_panel": {
     "default_path": "sidebar.html",
