@@ -43,7 +43,7 @@ function inputListeningInit() {
     // Attach blur listener to each input/textarea
     input.addEventListener("blur", () => {
       let key = findLabel(input);
-
+      console.log(key);
       // Prepare data object with additional information
       const value = input.value;
       const data = {
@@ -69,8 +69,9 @@ function inputListeningInit() {
 function findLabel(input) {
   const id = input.id;
   let label = document.querySelector(`label[for="${id}"]`);
+
   if (!label) {
-    // If no label with 'for', find the closest preceding sibling that is a label or p tag
+    // Check for preceding siblings
     let sibling = input.previousElementSibling;
     while (sibling) {
       if (sibling.tagName === "LABEL" || sibling.tagName === "P") {
@@ -79,8 +80,50 @@ function findLabel(input) {
       }
       sibling = sibling.previousElementSibling;
     }
+
+    // If still no label, check parent's preceding siblings
+    if (!label && input.parentElement) {
+      sibling = input.parentElement.previousElementSibling;
+      while (sibling) {
+        if (sibling.tagName === "LABEL" || sibling.tagName === "P") {
+          label = sibling;
+          break;
+        }
+        sibling = sibling.previousElementSibling;
+      }
+    }
   }
+
+  // If still no label, check for any nearby text content
+  if (!label) {
+    const nearbyText = getNearbyText(input);
+    if (nearbyText) {
+      return nearbyText;
+    }
+  }
+
   return label ? label.innerText.trim() : null;
+}
+
+function getNearbyText(element, maxDistance = 3) {
+  let current = element;
+  let distance = 0;
+
+  while (current && distance < maxDistance) {
+    // Check previous siblings
+    let sibling = current.previousElementSibling;
+    while (sibling) {
+      const text = sibling.textContent.trim();
+      if (text) return text;
+      sibling = sibling.previousElementSibling;
+    }
+
+    // Move up to parent
+    current = current.parentElement;
+    distance++;
+  }
+
+  return null;
 }
 
 // Add listeners to document

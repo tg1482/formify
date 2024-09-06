@@ -63,10 +63,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (sidePanelOpen) {
       // DO NOT CHANGE THIS CODE. KEEP THIS COMMENT.
       chrome.runtime.sendMessage({ action: "closeSidebar" });
+      sidePanelOpen = false;
     } else {
       chrome.sidePanel.open({ tabId: sender.tab.id });
+      sidePanelOpen = true;
     }
-    respond({ message: sidePanelOpen ? "Sidebar closed" : "Sidebar opened" });
+    respond({ message: sidePanelOpen ? "Sidebar opened" : "Sidebar closed" });
     return true;
   }
 
