@@ -120,6 +120,19 @@ function createBottomBar() {
   return bottomBar;
 }
 
+function createOverview() {
+  const overview = document.createElement("div");
+  overview.className = "overview";
+  overview.innerHTML = `
+    <p>Formify is a browser extension that automatically saves your form inputs locally. 
+    It listens for changes in input fields and text areas, storing the data securely in your browser. 
+    No data is sent to external servers, ensuring your privacy.</p>
+    <p>Use the search bar below to find your saved entries quickly. 
+    You can also manage your data retention settings and blacklists in the Settings panel.</p>
+  `;
+  return overview;
+}
+
 function createDeleteAllButton() {
   const deleteAllButton = document.createElement("button");
   deleteAllButton.innerHTML = "☠ Delete All";
@@ -148,6 +161,7 @@ function createSettingsPanel() {
   settingsPanel.style.display = "none";
 
   settingsPanel.appendChild(createSettingsTitle());
+  settingsPanel.appendChild(createOverview());
   settingsPanel.appendChild(createBackButton());
   settingsPanel.appendChild(createDataRetentionSection());
   settingsPanel.appendChild(createWebsiteBlacklistSection());
@@ -178,6 +192,11 @@ function createEditableHotkeySection() {
   const editableTitle = document.createElement("h3");
   editableTitle.textContent = "Sidebar Toggle Hotkey";
   editableHotkeySection.appendChild(editableTitle);
+
+  const description = document.createElement("p");
+  description.className = "section-description";
+  description.textContent = "Customize the hotkey combination used to open the Formify sidebar.";
+  editableHotkeySection.appendChild(description);
 
   const hotkeyContainer = document.createElement("div");
   hotkeyContainer.className = "hotkey-container";
@@ -228,6 +247,11 @@ function createNonEditableHotkeySection() {
   nonEditableTitle.textContent = "Other Hotkeys";
   nonEditableHotkeySection.appendChild(nonEditableTitle);
 
+  const description = document.createElement("p");
+  description.className = "section-description";
+  description.textContent = "These hotkeys are used to navigate the sidebar and perform actions. They work when you're inside the sidebar.";
+  nonEditableHotkeySection.appendChild(description);
+
   const hotkeys = [
     { keys: "Ctrl + S", description: "Toggle settings panel" },
     { keys: "Ctrl + C", description: "Copy focused entry" },
@@ -255,6 +279,12 @@ function createDataRetentionSection() {
   dataRetentionTitle.textContent = "Data Retention Strategy";
   dataRetentionSection.appendChild(dataRetentionTitle);
 
+  const description = document.createElement("p");
+  description.className = "section-description";
+  description.textContent =
+    "Choose how long to keep your data. 'Keep All Data' saves everything, while 'LRU' removes the least recently used entries after a specified number of days.";
+  dataRetentionSection.appendChild(description);
+
   const strategyContainer = document.createElement("div");
   strategyContainer.className = "strategy-container";
 
@@ -275,14 +305,25 @@ function createDataRetentionSection() {
 
   strategyContainer.appendChild(strategySelect);
 
+  const lruDaysContainer = document.createElement("div");
+  lruDaysContainer.className = "lru-days-container";
+  lruDaysContainer.style.display = "none";
+
   const lruDaysInput = document.createElement("input");
   lruDaysInput.type = "number";
   lruDaysInput.id = "lru-days";
   lruDaysInput.min = "1";
-  lruDaysInput.placeholder = "Days to keep data";
-  lruDaysInput.style.display = "none";
+  lruDaysInput.value = "30"; // Set a default value
+  lruDaysInput.placeholder = "Days to keep";
 
-  strategyContainer.appendChild(lruDaysInput);
+  const lruDaysLabel = document.createElement("span");
+  lruDaysLabel.textContent = "days";
+  lruDaysLabel.className = "lru-days-label";
+
+  lruDaysContainer.appendChild(lruDaysInput);
+  lruDaysContainer.appendChild(lruDaysLabel);
+
+  strategyContainer.appendChild(lruDaysContainer);
 
   const saveStrategyButton = document.createElement("button");
   saveStrategyButton.textContent = "Save";
@@ -293,16 +334,19 @@ function createDataRetentionSection() {
 
   dataRetentionSection.appendChild(strategyContainer);
 
-  strategySelect.addEventListener("change", function () {
-    lruDaysInput.style.display = this.value === "lru" ? "inline-block" : "none";
-  });
-
   // Add manual cleanup button
   const manualCleanupButton = document.createElement("button");
   manualCleanupButton.textContent = "Run Cleanup Now";
   manualCleanupButton.className = "manual-cleanup-button";
+  manualCleanupButton.style.display = "none"; // Hide by default
   manualCleanupButton.onclick = runManualCleanup;
   dataRetentionSection.appendChild(manualCleanupButton);
+
+  strategySelect.addEventListener("change", function () {
+    const isLRU = this.value === "lru";
+    lruDaysContainer.style.display = isLRU ? "flex" : "none";
+    manualCleanupButton.style.display = isLRU ? "block" : "none";
+  });
 
   return dataRetentionSection;
 }
@@ -315,6 +359,20 @@ function createTitleBlacklistSection() {
   return createBlacklistSection("Title Blacklist", "titleBlacklist");
 }
 
+function createTitleBlacklistDescription() {
+  const description = document.createElement("p");
+  description.className = "section-description";
+  description.textContent = "Add keywords to this blacklist to prevent Formify from saving entries with these words in their titles.";
+  return description;
+}
+
+function createWebsiteBlacklistDescription() {
+  const description = document.createElement("p");
+  description.className = "section-description";
+  description.textContent = "Add websites to this blacklist to prevent Formify from saving data from these domains.";
+  return description;
+}
+
 function createBlacklistSection(title, id) {
   const section = document.createElement("div");
   section.className = "blacklist-section";
@@ -322,6 +380,12 @@ function createBlacklistSection(title, id) {
   const sectionTitle = document.createElement("h3");
   sectionTitle.textContent = title;
   section.appendChild(sectionTitle);
+
+  if (id === "websiteBlacklist") {
+    section.appendChild(createWebsiteBlacklistDescription());
+  } else if (id === "titleBlacklist") {
+    section.appendChild(createTitleBlacklistDescription());
+  }
 
   const input = document.createElement("input");
   input.type = "text";
@@ -417,8 +481,13 @@ function loadCurrentSettings() {
       document.getElementById("formie-key2").value = items.hotKey2;
     }
     if (items.dataRetentionStrategy) {
-      document.getElementById("data-retention-strategy").value = items.dataRetentionStrategy;
-      document.getElementById("lru-days").style.display = items.dataRetentionStrategy === "lru" ? "block" : "none";
+      const strategySelect = document.getElementById("data-retention-strategy");
+      strategySelect.value = items.dataRetentionStrategy;
+      const lruDaysContainer = document.querySelector(".lru-days-container");
+      const manualCleanupButton = document.querySelector(".manual-cleanup-button");
+      const isLRU = items.dataRetentionStrategy === "lru";
+      lruDaysContainer.style.display = isLRU ? "flex" : "none";
+      manualCleanupButton.style.display = isLRU ? "block" : "none";
     }
     if (items.lruDays) {
       document.getElementById("lru-days").value = items.lruDays;
