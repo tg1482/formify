@@ -1,4 +1,13 @@
-import { initDB, storeFormData, readAllData, searchData, deleteKey, deleteAllData, updateUsageStats, deleteOldRecords } from "./db.js";
+import {
+  ensureDBInitialized,
+  storeFormData,
+  readAllData,
+  searchData,
+  deleteKey,
+  deleteAllData,
+  updateUsageStats,
+  deleteOldRecords,
+} from "./db.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -7,7 +16,7 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["all"],
   });
   console.log("Extension installed");
-  initDB()
+  ensureDBInitialized()
     .then(() => {
       console.log("Database initialized successfully");
       initHotKeys();

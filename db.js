@@ -2,9 +2,16 @@ let db;
 const dbName = "FormDataDB";
 const storeName = "entries";
 
-export function initDB() {
+export async function ensureDBInitialized() {
+  if (db) {
+    return Promise.resolve(db);
+  }
+  return initDB();
+}
+
+function initDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(dbName, 5); // Keep the version number
+    const request = indexedDB.open(dbName, 5);
 
     request.onerror = (event) => {
       console.error("Database error:", event.target.error);
@@ -21,8 +28,8 @@ export function initDB() {
       console.log("Database upgrade needed");
       const db = event.target.result;
 
-      if (!db.objectStoreNames.contains("formData")) {
-        const objectStore = db.createObjectStore("formData", { keyPath: "id", autoIncrement: true });
+      if (!db.objectStoreNames.contains(storeName)) {
+        const objectStore = db.createObjectStore(storeName, { keyPath: "id", autoIncrement: true });
         objectStore.createIndex("createdAt", "createdAt", { unique: false });
         objectStore.createIndex("lastUsedAt", "lastUsedAt", { unique: false });
         objectStore.createIndex("useCount", "useCount", { unique: false });
@@ -34,291 +41,199 @@ export function initDB() {
   });
 }
 
-export function storeFormData(data) {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error("Database not initialized"));
-      return;
-    }
+export async function storeFormData(data) {
+  return ensureDBInitialized().then(() => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, "readwrite");
+      const store = transaction.objectStore(storeName);
 
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
+      for (const [key, value] of Object.entries(data)) {
+        const now = new Date().toISOString();
+        const update_request = store.put({
+          id: cleanString(key),
+          data: value,
+          createdAt: value.createdAt || now,
+          lastUsedAt: value.lastUsedAt || now,
+          useCount: value.useCount || 0,
+        });
 
-    for (const [key, value] of Object.entries(data)) {
-      const now = new Date().toISOString();
-      const update_request = store.put({
-        id: cleanString(key),
-        data: value,
-        createdAt: value.createdAt || now,
-        lastUsedAt: value.lastUsedAt || now,
-        useCount: value.useCount || 0,
-      });
+        update_request.onerror = function (event) {
+          console.error("Failed to store form data for key:", key, "error:", event.target.error);
+          reject(event.target.error);
+        };
+      }
 
-      update_request.onerror = function (event) {
-        console.error("Failed to store form data for key:", key, "error:", event.target.error);
+      transaction.oncomplete = function () {
+        resolve();
+      };
+
+      transaction.onerror = function (event) {
+        console.error("Transaction failed: ", event.target.error);
         reject(event.target.error);
       };
-    }
-
-    transaction.oncomplete = function () {
-      resolve();
-    };
-
-    transaction.onerror = function (event) {
-      console.error("Transaction failed: ", event.target.error);
-      reject(event.target.error);
-    };
+    });
   });
 }
 
-export function updateUsageStats(id) {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error("Database not initialized"));
-      return;
-    }
-
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
-    const request = store.get(id);
-
-    request.onsuccess = function (event) {
-      const data = event.target.result;
-      if (data) {
-        data.lastUsedAt = new Date().toISOString();
-        data.useCount = (data.useCount || 0) + 1;
-
-        const updateRequest = store.put(data);
-        updateRequest.onsuccess = function () {
-          resolve({ success: true });
-        };
-        updateRequest.onerror = function (event) {
-          reject({ success: false, error: event.target.error });
-        };
-      } else {
-        reject({ success: false, error: "Entry not found" });
-      }
-    };
-
-    request.onerror = function (event) {
-      reject({ success: false, error: event.target.error });
-    };
-  });
-}
-
-export function deleteOldRecords(strategy, lruDays) {
-  return new Promise((resolve, reject) => {
-    if (strategy === "all") {
-      resolve(0); // No deletion needed
-      return;
-    }
-
-    if (!db) {
-      initDB()
-        .then(() => {
-          performDeletion(strategy, lruDays, resolve, reject);
-        })
-        .catch(reject);
-    } else {
-      performDeletion(strategy, lruDays, resolve, reject);
-    }
-  });
-}
-
-function performDeletion(strategy, lruDays, resolve, reject) {
-  const transaction = db.transaction(storeName, "readwrite");
-  const store = transaction.objectStore(storeName);
-  const request = store.openCursor();
-  const deletePromises = [];
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - lruDays);
-  let deletedCount = 0;
-
-  request.onsuccess = function (event) {
-    const cursor = event.target.result;
-    if (cursor) {
-      const record = cursor.value;
-      const lastUsedDate = new Date(record.lastUsedAt);
-      const createdDate = new Date(record.createdAt);
-
-      // Use createdAt if lastUsedAt is invalid
-      const dateToCompare = isNaN(lastUsedDate.getTime()) ? createdDate : lastUsedDate;
-      if (dateToCompare < cutoffDate) {
-        deletePromises.push(
-          new Promise((resolveDelete) => {
-            const deleteRequest = cursor.delete();
-            deleteRequest.onsuccess = () => {
-              deletedCount++;
-              resolveDelete();
-            };
-          })
-        );
-      }
-      cursor.continue();
-    } else {
-      Promise.all(deletePromises)
-        .then(() => resolve(deletedCount))
-        .catch(reject);
-    }
-  };
-
-  request.onerror = function (event) {
-    reject(event.target.error);
-  };
-}
-
-export function readData(key) {
-  const open_request = indexedDB.open(dbName);
-
-  open_request.onsuccess = function (event) {
-    const db = event.target.result;
-    const transaction = db.transaction(storeName, "readonly");
-    const store = transaction.objectStore(storeName);
-    const get_request = store.get(key);
-
-    get_request.onsuccess = function (event) {};
-
-    get_request.onerror = function (event) {
-      console.error("Failed to read data:", event.target.error);
-    };
-  };
-}
-
-export function readAllData() {
-  return new Promise((resolve, reject) => {
-    const open_request = indexedDB.open(dbName);
-    const data = [];
-    open_request.onsuccess = function (event) {
-      const db = event.target.result;
-      const transaction = db.transaction(storeName, "readonly");
+export async function updateUsageStats(id) {
+  return ensureDBInitialized().then(() => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, "readwrite");
       const store = transaction.objectStore(storeName);
-      const cursor_request = store.openCursor();
+      const request = store.get(id);
 
-      cursor_request.onsuccess = function (event) {
-        const cursor = event.target.result;
-        if (cursor) {
-          data.push(cursor.value);
-          cursor.continue(); // Move to the next object in the store
+      request.onsuccess = function (event) {
+        const data = event.target.result;
+        if (data) {
+          data.lastUsedAt = new Date().toISOString();
+          data.useCount = (data.useCount || 0) + 1;
+
+          const updateRequest = store.put(data);
+          updateRequest.onsuccess = function () {
+            resolve({ success: true });
+          };
+          updateRequest.onerror = function (event) {
+            reject({ success: false, error: event.target.error });
+          };
         } else {
-          resolve(data); // Resolve the promise with the data when done
+          reject({ success: false, error: "Entry not found" });
         }
       };
 
-      cursor_request.onerror = function (event) {
-        console.error("Failed to read data:", event.target.error);
-        reject(event.target.error); // Reject the promise on error
+      request.onerror = function (event) {
+        reject({ success: false, error: event.target.error });
       };
-    };
-
-    open_request.onerror = function (event) {
-      console.error("Database error:", event.target.errorCode);
-      reject(event.target.errorCode); // Reject the promise on error
-    };
+    });
   });
 }
 
-export function searchData(keyword, filters = [], currentHostname) {
-  return new Promise((resolve, reject) => {
-    const open_request = indexedDB.open(dbName);
-    const filteredData = [];
-    let totalCount = 0;
+export async function deleteOldRecords(strategy, lruDays) {
+  return ensureDBInitialized().then(() => {
+    return new Promise((resolve, reject) => {
+      if (strategy === "all") {
+        resolve(0);
+        return;
+      }
 
-    open_request.onsuccess = function (event) {
-      const db = event.target.result;
-      const transaction = db.transaction(storeName, "readonly");
+      const transaction = db.transaction(storeName, "readwrite");
       const store = transaction.objectStore(storeName);
-      const cursor_request = store.openCursor();
+      const request = store.openCursor();
+      const deletePromises = [];
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - lruDays);
+      let deletedCount = 0;
 
-      cursor_request.onsuccess = function (event) {
+      request.onsuccess = function (event) {
         const cursor = event.target.result;
         if (cursor) {
-          totalCount++;
-          const entry = cursor.value;
-          if (matchesFilters(entry, filters, currentHostname) && matchesKeyword(entry, keyword)) {
-            filteredData.push(entry);
+          const record = cursor.value;
+          const lastUsedDate = new Date(record.lastUsedAt);
+          const createdDate = new Date(record.createdAt);
+
+          const dateToCompare = isNaN(lastUsedDate.getTime()) ? createdDate : lastUsedDate;
+          if (dateToCompare < cutoffDate) {
+            deletePromises.push(
+              new Promise((resolveDelete) => {
+                const deleteRequest = cursor.delete();
+                deleteRequest.onsuccess = () => {
+                  deletedCount++;
+                  resolveDelete();
+                };
+              })
+            );
           }
           cursor.continue();
         } else {
-          // Sort the filtered data based on matchPriority
-          filteredData.sort((a, b) => {
-            if (a.matchPriority !== b.matchPriority) {
-              return a.matchPriority - b.matchPriority;
-            }
-            // If matchPriority is the same, sort alphabetically by id
-            return a.id.toLowerCase().localeCompare(b.id.toLowerCase());
-          });
-
-          resolve({ filteredData, totalCount });
+          Promise.all(deletePromises)
+            .then(() => resolve(deletedCount))
+            .catch(reject);
         }
       };
 
-      cursor_request.onerror = function (event) {
-        console.error("Failed to read data:", event.target.error);
+      request.onerror = function (event) {
         reject(event.target.error);
       };
-    };
-
-    open_request.onerror = function (event) {
-      console.error("Database error:", event.target.errorCode);
-      reject(event.target.errorCode);
-    };
+    });
   });
 }
 
-export function deleteKey(key) {
-  const open_request = indexedDB.open(dbName);
+export async function readAllData() {
+  return ensureDBInitialized().then(() => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, "readonly");
+      const store = transaction.objectStore(storeName);
+      const request = store.getAll();
 
-  open_request.onsuccess = function (event) {
-    const db = event.target.result;
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
-    const delete_request = store.delete(key);
+      request.onsuccess = function (event) {
+        resolve(event.target.result);
+      };
 
-    delete_request.onsuccess = function () {};
-
-    delete_request.onerror = function (event) {
-      console.error("Failed to delete data for key:", key, "error:", event.target.error);
-    };
-
-    transaction.oncomplete = function () {};
-
-    transaction.onerror = function (event) {
-      console.error("Transaction failed on deletion:", event.target.error);
-    };
-  };
-
-  open_request.onerror = function (event) {
-    console.error("Database error on open during delete:", event.target.errorCode);
-  };
+      request.onerror = function (event) {
+        console.error("Failed to read data:", event.target.error);
+        reject(event.target.error);
+      };
+    });
+  });
 }
 
-export function deleteAllData() {
-  const open_request = indexedDB.open(dbName);
+export async function searchData(keyword, filters = [], currentHostname) {
+  return ensureDBInitialized().then(() => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, "readonly");
+      const store = transaction.objectStore(storeName);
+      const request = store.getAll();
 
-  open_request.onsuccess = function (event) {
-    const db = event.target.result;
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
-    const clear_request = store.clear();
+      request.onsuccess = function (event) {
+        const allData = event.target.result;
+        const filteredData = allData.filter((entry) => matchesFilters(entry, filters, currentHostname) && matchesKeyword(entry, keyword));
+        resolve({ filteredData, totalCount: allData.length });
+      };
 
-    clear_request.onsuccess = function () {
-      console.log("All data deleted successfully.");
-    };
+      request.onerror = function (event) {
+        console.error("Failed to search data:", event.target.error);
+        reject(event.target.error);
+      };
+    });
+  });
+}
 
-    clear_request.onerror = function (event) {
-      console.error("Failed to delete all data:", event.target.error);
-    };
+export async function deleteKey(key) {
+  return ensureDBInitialized().then(() => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, "readwrite");
+      const store = transaction.objectStore(storeName);
+      const request = store.delete(key);
 
-    transaction.oncomplete = function () {};
+      request.onsuccess = function () {
+        resolve();
+      };
 
-    transaction.onerror = function (event) {
-      console.error("Transaction failed on all data deletion:", event.target.error);
-    };
-  };
+      request.onerror = function (event) {
+        console.error("Failed to delete data for key:", key, "error:", event.target.error);
+        reject(event.target.error);
+      };
+    });
+  });
+}
 
-  open_request.onerror = function (event) {
-    console.error("Database error on open during delete:", event.target.errorCode);
-  };
+export async function deleteAllData() {
+  return ensureDBInitialized().then(() => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(storeName, "readwrite");
+      const store = transaction.objectStore(storeName);
+      const request = store.clear();
+
+      request.onsuccess = function () {
+        console.log("All data deleted successfully.");
+        resolve();
+      };
+
+      request.onerror = function (event) {
+        console.error("Failed to delete all data:", event.target.error);
+        reject(event.target.error);
+      };
+    });
+  });
 }
 
 function toSentenceCase(str) {

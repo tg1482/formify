@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       handleTextSelection(message.selectedText);
       break;
     default:
-      console.warn("Unhandled message action:", message.action);
+      break;
   }
   return true;
 });
@@ -49,7 +49,7 @@ function createSidebarElement() {
 
 function createHeader() {
   const header = document.createElement("h1");
-  header.textContent = "Formie Data";
+  header.textContent = "Formify";
   return header;
 }
 
