@@ -695,3 +695,19 @@ html {
   margin: 5px 10px 15px 10px;
   line-height: 1.4;
 }
+
+.section-description.collapsible {
+  cursor: pointer;
+}
+
+.section-description .expand-btn,
+.section-description .collapse-btn {
+  color: #33ccff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.section-description .expand-btn:hover,
+.section-description .collapse-btn:hover {
+  color: #ffff00;
+}

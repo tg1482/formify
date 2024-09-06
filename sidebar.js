@@ -193,10 +193,8 @@ function createEditableHotkeySection() {
   editableTitle.textContent = "Sidebar Toggle Hotkey";
   editableHotkeySection.appendChild(editableTitle);
 
-  const description = document.createElement("p");
-  description.className = "section-description";
-  description.textContent = "Customize the hotkey combination used to open the Formify sidebar.";
-  editableHotkeySection.appendChild(description);
+  const description = "Customize the hotkey combination used to open the Formify sidebar.";
+  editableHotkeySection.appendChild(createCollapsibleDescription(description));
 
   const hotkeyContainer = document.createElement("div");
   hotkeyContainer.className = "hotkey-container";
@@ -247,10 +245,8 @@ function createNonEditableHotkeySection() {
   nonEditableTitle.textContent = "Other Hotkeys";
   nonEditableHotkeySection.appendChild(nonEditableTitle);
 
-  const description = document.createElement("p");
-  description.className = "section-description";
-  description.textContent = "These hotkeys are used to navigate the sidebar and perform actions. They work when you're inside the sidebar.";
-  nonEditableHotkeySection.appendChild(description);
+  const description = "These hotkeys are used to navigate the sidebar and perform actions. They work when you're inside the sidebar.";
+  nonEditableHotkeySection.appendChild(createCollapsibleDescription(description));
 
   const hotkeys = [
     { keys: "Ctrl + S", description: "Toggle settings panel" },
@@ -279,11 +275,10 @@ function createDataRetentionSection() {
   dataRetentionTitle.textContent = "Data Retention Strategy";
   dataRetentionSection.appendChild(dataRetentionTitle);
 
-  const description = document.createElement("p");
-  description.className = "section-description";
-  description.textContent =
+  const description =
     "Choose how long to keep your data. 'Keep All Data' saves everything, while 'LRU' removes the least recently used entries after a specified number of days.";
-  dataRetentionSection.appendChild(description);
+
+  dataRetentionSection.appendChild(createCollapsibleDescription(description));
 
   const strategyContainer = document.createElement("div");
   strategyContainer.className = "strategy-container";
@@ -351,6 +346,34 @@ function createDataRetentionSection() {
   return dataRetentionSection;
 }
 
+function createCollapsibleDescription(fullDescription) {
+  const description = document.createElement("p");
+  description.className = "section-description collapsible";
+  const shortDescription = fullDescription.split(" ").slice(0, 8).join(" ");
+
+  description.innerHTML = `
+    <span class="short-desc">${shortDescription} <span class="expand-btn">...</span></span>
+    <span class="full-desc" style="display: none;">${fullDescription} <span class="collapse-btn">Collapse</span></span>
+  `;
+  description.querySelector(".expand-btn").addEventListener("click", () => toggleDescription(description));
+  description.querySelector(".collapse-btn").addEventListener("click", () => toggleDescription(description));
+
+  return description;
+}
+
+function toggleDescription(descElement) {
+  const shortDesc = descElement.querySelector(".short-desc");
+  const fullDesc = descElement.querySelector(".full-desc");
+
+  if (shortDesc.style.display !== "none") {
+    shortDesc.style.display = "none";
+    fullDesc.style.display = "inline";
+  } else {
+    shortDesc.style.display = "inline";
+    fullDesc.style.display = "none";
+  }
+}
+
 function createWebsiteBlacklistSection() {
   return createBlacklistSection("Website Blacklist", "websiteBlacklist");
 }
@@ -360,17 +383,11 @@ function createTitleBlacklistSection() {
 }
 
 function createTitleBlacklistDescription() {
-  const description = document.createElement("p");
-  description.className = "section-description";
-  description.textContent = "Add keywords to this blacklist to prevent Formify from saving entries with these words in their titles.";
-  return description;
+  return "Add keywords to this blacklist to prevent Formify from saving entries with these words in their titles.";
 }
 
 function createWebsiteBlacklistDescription() {
-  const description = document.createElement("p");
-  description.className = "section-description";
-  description.textContent = "Add websites to this blacklist to prevent Formify from saving data from these domains.";
-  return description;
+  return "Add websites to this blacklist to prevent Formify from saving data from these domains.";
 }
 
 function createBlacklistSection(title, id) {
@@ -381,11 +398,8 @@ function createBlacklistSection(title, id) {
   sectionTitle.textContent = title;
   section.appendChild(sectionTitle);
 
-  if (id === "websiteBlacklist") {
-    section.appendChild(createWebsiteBlacklistDescription());
-  } else if (id === "titleBlacklist") {
-    section.appendChild(createTitleBlacklistDescription());
-  }
+  const description = id === "websiteBlacklist" ? createTitleBlacklistDescription() : createWebsiteBlacklistDescription();
+  section.appendChild(createCollapsibleDescription(description));
 
   const input = document.createElement("input");
   input.type = "text";
