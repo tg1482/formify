@@ -607,7 +607,6 @@ function moveFocus(direction, entries) {
 
 function copyFocusedEntry(entries) {
   console.log("copyFocusedEntry");
-  window.focus(); // Attempt to focus the sidebar window
   const focusedEntry = entries[focusedIndex];
   if (focusedEntry) {
     const value = focusedEntry.querySelector("p").textContent.replace(/^"|"$/g, "");
@@ -832,27 +831,10 @@ function timeSince(date) {
   return Math.floor(seconds) + " seconds ago";
 }
 
-function copyEntry(value, button) {
-  console.log("copyEntry");
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard
-      .writeText(value)
-      .then(() => {
-        updateCopyButtonState(button, true);
-      })
-      .catch((err) => {
-        console.error("Failed to copy: ", err);
-        fallbackCopyTextToClipboard(value, button);
-      });
-  } else {
-    fallbackCopyTextToClipboard(value, button);
-  }
-}
-
-function fallbackCopyTextToClipboard(text, button) {
+function copyEntry(text, button) {
   const textArea = document.createElement("textarea");
   textArea.value = text;
-  textArea.style.position = "fixed"; // Avoid scrolling to bottom
+  textArea.style.position = "fixed";
   document.body.appendChild(textArea);
   textArea.focus();
   textArea.select();
