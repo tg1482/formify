@@ -243,13 +243,12 @@ function handleSidepanelKeypress(event) {
         event.preventDefault();
         chrome.runtime.sendMessage({ action: "relayMessageToSidebar", message: { action: "toggleSettings" } });
         break;
-      case "f":
+      case "c":
         event.preventDefault();
         chrome.runtime.sendMessage({
           action: "relayMessageToSidebar",
           message: { action: "copyFocusedEntry" },
         });
-        // Attempt to focus the sidebar
         chrome.runtime.sendMessage({ action: "focusSidebar" });
         break;
       case "d":

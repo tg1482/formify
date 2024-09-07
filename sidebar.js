@@ -270,8 +270,8 @@ function createNonEditableHotkeySection() {
     { keys: "Ctrl + S", description: "Toggle settings panel" },
     { keys: "Ctrl + C", description: "Copy focused entry" },
     { keys: "Ctrl + D", description: "Delete focused entry" },
-    { keys: "↑", description: "Move focus up" },
-    { keys: "↓", description: "Move focus down" },
+    { keys: "Ctrl + k", description: "Move focus up" },
+    { keys: "Ctrl + j", description: "Move focus down" },
     { keys: "ESC", description: "Exit settings" },
   ];
 
@@ -593,7 +593,6 @@ function focusFirstElement() {
   if (entries.length > 0) {
     focusedIndex = 0;
     entries[0].classList.add("focused");
-    entries[0].scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 }
 
@@ -900,14 +899,3 @@ addCustomSidebar();
 fetchDataFromDB("all");
 
 const port = chrome.runtime.connect({ name: "sidebar-bg-port" });
-
-function focusSearchBar() {
-  console.log("focusSearchBar");
-  const searchbar = document.querySelector(".search-bar-container input");
-  if (searchbar) {
-    searchbar.focus();
-    console.log("Search bar focused");
-  } else {
-    console.log("Search bar not found");
-  }
-}
