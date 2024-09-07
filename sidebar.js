@@ -27,9 +27,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case "moveFocus":
       moveFocus(message.direction, document.querySelectorAll(".data-entry"));
       break;
-    case "handleEscape":
-      handleEscape();
-      break;
     case "focusSearchBar":
       focusSearchBar();
       break;
@@ -83,9 +80,6 @@ function setupKeyboardListeners() {
           window.close();
           break;
       }
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      handleEscape();
     }
   });
 }
@@ -221,7 +215,6 @@ function createSettingsPanel() {
   settingsPanel.appendChild(createDataRetentionSection());
   settingsPanel.appendChild(createWebsiteBlacklistSection());
   settingsPanel.appendChild(createTitleBlacklistSection());
-  settingsPanel.appendChild(createEditableHotkeySection());
   settingsPanel.appendChild(createNonEditableHotkeySection());
 
   return settingsPanel;
@@ -240,58 +233,6 @@ function createBackButton() {
   return backButton;
 }
 
-function createEditableHotkeySection() {
-  const editableHotkeySection = document.createElement("div");
-  editableHotkeySection.className = "hotkey-section";
-
-  const editableTitle = document.createElement("h3");
-  editableTitle.textContent = "Sidebar Toggle Hotkey";
-  editableHotkeySection.appendChild(editableTitle);
-
-  const description = "Customize the hotkey combination used to open the Formify sidebar.";
-  editableHotkeySection.appendChild(createCollapsibleDescription(description));
-
-  const hotkeyContainer = document.createElement("div");
-  hotkeyContainer.className = "hotkey-container";
-
-  const key1Select = document.createElement("select");
-  key1Select.id = "formie-key1";
-  ["Ctrl", "Alt", "Shift"].forEach((key) => {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = key === "Alt" ? "Alt / Option" : key;
-    key1Select.appendChild(option);
-  });
-
-  const plusSign = document.createElement("span");
-  plusSign.className = "plus-sign";
-  plusSign.textContent = "+";
-
-  const key2Select = document.createElement("select");
-  key2Select.id = "formie-key2";
-  for (let i = 65; i <= 90; i++) {
-    const option = document.createElement("option");
-    option.value = String.fromCharCode(i);
-    option.textContent = String.fromCharCode(i);
-    if (i === 79) option.selected = true;
-    key2Select.appendChild(option);
-  }
-
-  const saveButton = document.createElement("button");
-  saveButton.className = "saveButton";
-  saveButton.textContent = "Save";
-  saveButton.onclick = saveSettings;
-
-  hotkeyContainer.appendChild(key1Select);
-  hotkeyContainer.appendChild(plusSign);
-  hotkeyContainer.appendChild(key2Select);
-  hotkeyContainer.appendChild(saveButton);
-
-  editableHotkeySection.appendChild(hotkeyContainer);
-
-  return editableHotkeySection;
-}
-
 function createNonEditableHotkeySection() {
   const nonEditableHotkeySection = document.createElement("div");
   nonEditableHotkeySection.className = "hotkey-section";
@@ -304,6 +245,7 @@ function createNonEditableHotkeySection() {
   nonEditableHotkeySection.appendChild(createCollapsibleDescription(description));
 
   const hotkeys = [
+    { keys: "Ctrl + O", description: "Open sidebar" },
     { keys: "Ctrl + S", description: "Toggle settings panel" },
     { keys: "Ctrl + C", description: "Copy focused entry" },
     { keys: "Ctrl + D", description: "Delete focused entry" },
@@ -453,7 +395,7 @@ function createBlacklistSection(title, id) {
   sectionTitle.textContent = title;
   section.appendChild(sectionTitle);
 
-  const description = id === "websiteBlacklist" ? createTitleBlacklistDescription() : createWebsiteBlacklistDescription();
+  const description = id === "websiteBlacklist" ? createWebsiteBlacklistDescription() : createTitleBlacklistDescription();
   section.appendChild(createCollapsibleDescription(description));
 
   const input = document.createElement("input");
@@ -544,11 +486,7 @@ function toggleSettings() {
 }
 
 function loadCurrentSettings() {
-  chrome.storage.local.get(["hotKey1", "hotKey2", "dataRetentionStrategy", "lruDays"], function (items) {
-    if (items.hotKey1 && items.hotKey2) {
-      document.getElementById("formie-key1").value = items.hotKey1;
-      document.getElementById("formie-key2").value = items.hotKey2;
-    }
+  chrome.storage.local.get(["dataRetentionStrategy", "lruDays"], function (items) {
     if (items.dataRetentionStrategy) {
       const strategySelect = document.getElementById("data-retention-strategy");
       strategySelect.value = items.dataRetentionStrategy;
@@ -566,15 +504,11 @@ function loadCurrentSettings() {
 }
 
 function saveSettings() {
-  const key1 = document.getElementById("formie-key1").value;
-  const key2 = document.getElementById("formie-key2").value;
   const dataRetentionStrategy = document.getElementById("data-retention-strategy").value;
   const lruDays = document.getElementById("lru-days").value;
 
   chrome.storage.local.set(
     {
-      hotKey1: key1,
-      hotKey2: key2,
       dataRetentionStrategy: dataRetentionStrategy,
       lruDays: lruDays,
     },
@@ -586,8 +520,6 @@ function saveSettings() {
 
   chrome.runtime.sendMessage({
     action: "updateSettings",
-    hotKey1: key1,
-    hotKey2: key2,
     dataRetentionStrategy: dataRetentionStrategy,
     lruDays: lruDays,
   });
@@ -667,13 +599,6 @@ function deleteFocusedEntry(entries) {
       focusedIndex = -1;
     }
   });
-}
-
-function handleEscape() {
-  const settingsPanel = document.getElementById("settingsPanel");
-  if (settingsPanel.style.display === "block") {
-    toggleSettings();
-  }
 }
 
 function toggleFilter(button) {

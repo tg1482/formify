@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Formie",
+  "name": "Formify",
   "version": "2.0",
   "description": "Copilot for filling forms",
   "permissions": ["storage", "contextMenus", "sidePanel", "tabs", "alarms"],
