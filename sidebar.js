@@ -1,4 +1,6 @@
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+chrome.runtime.connect({ name: "sidebar" });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.action) {
     case "displayData":
       updateSidebarUI(message.entries, message.keyword, message.totalCount);
@@ -12,6 +14,24 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       break;
     case "textSelected":
       handleTextSelection(message.selectedText);
+      break;
+    case "toggleSettings":
+      toggleSettings();
+      break;
+    case "copyFocusedEntry":
+      copyFocusedEntry(document.querySelectorAll(".data-entry"));
+      break;
+    case "deleteFocusedEntry":
+      deleteFocusedEntry(document.querySelectorAll(".data-entry"));
+      break;
+    case "moveFocus":
+      moveFocus(message.direction, document.querySelectorAll(".data-entry"));
+      break;
+    case "handleEscape":
+      handleEscape();
+      break;
+    case "focusSearchBar":
+      focusSearchBar();
       break;
     default:
       break;
@@ -30,8 +50,6 @@ let focusedIndex = -1;
 function addCustomSidebar() {
   const sidebar = createSidebarElement();
   document.body.appendChild(sidebar);
-
-  addEventListeners();
   focusFirstElement();
 }
 
@@ -579,54 +597,6 @@ function focusFirstElement() {
   }
 }
 
-function handleKeyPress(event) {
-  const entries = document.querySelectorAll(".data-entry");
-  const settingsPanel = document.getElementById("settingsPanel");
-
-  if (event.ctrlKey && event.key.toLowerCase() === "s") {
-    event.preventDefault();
-    toggleSettings();
-    return;
-  }
-
-  if (event.key === "Escape") {
-    event.preventDefault();
-    if (settingsPanel.style.display === "block") {
-      toggleSettings();
-    }
-    return;
-  }
-
-  if (entries.length === 0 && settingsPanel.style.display === "none") return;
-
-  if (event.ctrlKey) {
-    switch (event.key.toLowerCase()) {
-      case "c":
-        event.preventDefault();
-        copyFocusedEntry(entries);
-        break;
-      case "d":
-        event.preventDefault();
-        deleteFocusedEntry(entries);
-        break;
-    }
-  } else {
-    const searchBar = document.querySelector(".search-bar-container input");
-    if (searchBar !== document.activeElement) {
-      switch (event.key.toLowerCase()) {
-        case "arrowdown":
-          event.preventDefault();
-          moveFocus(1, entries);
-          break;
-        case "arrowup":
-          event.preventDefault();
-          moveFocus(-1, entries);
-          break;
-      }
-    }
-  }
-}
-
 function moveFocus(direction, entries) {
   if (focusedIndex !== -1) {
     entries[focusedIndex].classList.remove("focused");
@@ -637,10 +607,16 @@ function moveFocus(direction, entries) {
 }
 
 function copyFocusedEntry(entries) {
+  console.log("copyFocusedEntry");
+  window.focus(); // Attempt to focus the sidebar window
   const focusedEntry = entries[focusedIndex];
-  const value = focusedEntry.querySelector("p").textContent.replace(/^"|"$/g, "");
-  const copyButton = focusedEntry.querySelector(".copy-button");
-  copyEntry(value, copyButton);
+  if (focusedEntry) {
+    const value = focusedEntry.querySelector("p").textContent.replace(/^"|"$/g, "");
+    const copyButton = focusedEntry.querySelector(".copy-button");
+    copyEntry(value, copyButton);
+  } else {
+    console.log("No focused entry found");
+  }
 }
 
 function deleteFocusedEntry(entries) {
@@ -656,6 +632,13 @@ function deleteFocusedEntry(entries) {
       focusedIndex = -1;
     }
   });
+}
+
+function handleEscape() {
+  const settingsPanel = document.getElementById("settingsPanel");
+  if (settingsPanel.style.display === "block") {
+    toggleSettings();
+  }
 }
 
 function toggleFilter(button) {
@@ -851,14 +834,49 @@ function timeSince(date) {
 }
 
 function copyEntry(value, button) {
-  navigator.clipboard.writeText(value).then(() => {
-    const originalText = button.textContent;
-    button.textContent = "Copied!";
-    setTimeout(() => {
-      button.textContent = originalText;
-    }, 1000);
+  console.log("copyEntry");
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard
+      .writeText(value)
+      .then(() => {
+        updateCopyButtonState(button, true);
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err);
+        fallbackCopyTextToClipboard(value, button);
+      });
+  } else {
+    fallbackCopyTextToClipboard(value, button);
+  }
+}
 
-    // Update usage stats
+function fallbackCopyTextToClipboard(text, button) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed"; // Avoid scrolling to bottom
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    const successful = document.execCommand("copy");
+    updateCopyButtonState(button, successful);
+  } catch (err) {
+    console.error("Fallback: Oops, unable to copy", err);
+    updateCopyButtonState(button, false);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+function updateCopyButtonState(button, successful) {
+  const originalText = button.textContent;
+  button.textContent = successful ? "Copied!" : "Copy failed";
+  setTimeout(() => {
+    button.textContent = originalText;
+  }, 1000);
+
+  if (successful) {
     const entryId = button.closest(".data-entry").querySelector("h3 strong").textContent;
     chrome.runtime.sendMessage({ action: "updateUsageStats", id: entryId }, (response) => {
       if (response.success) {
@@ -867,7 +885,7 @@ function copyEntry(value, button) {
         console.error("Failed to update usage stats:", response.error);
       }
     });
-  });
+  }
 }
 
 function createCountDisplay() {
@@ -877,17 +895,19 @@ function createCountDisplay() {
   return countDisplay;
 }
 
-function addEventListeners() {
-  document.addEventListener("keydown", handleKeyPress);
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "sidebarOpened") {
-      focusFirstElement();
-    }
-  });
-}
-
 addCustomSidebar();
 
 fetchDataFromDB("all");
 
-chrome.runtime.connect({ name: "mySidepanel" });
+const port = chrome.runtime.connect({ name: "sidebar-bg-port" });
+
+function focusSearchBar() {
+  console.log("focusSearchBar");
+  const searchbar = document.querySelector(".search-bar-container input");
+  if (searchbar) {
+    searchbar.focus();
+    console.log("Search bar focused");
+  } else {
+    console.log("Search bar not found");
+  }
+}

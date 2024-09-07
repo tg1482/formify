@@ -28,8 +28,22 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
-let sidePanelOpen = false;
 let sidebarPort = null;
+let isSidebarOpen = false;
+
+chrome.runtime.onConnect.addListener(function (port) {
+  if (port.name === "sidebar-bg-port") {
+    sidebarPort = port;
+    isSidebarOpen = true;
+    notifyContentScriptSidebarState(true);
+
+    port.onDisconnect.addListener(() => {
+      sidebarPort = null;
+      isSidebarOpen = false;
+      notifyContentScriptSidebarState(false);
+    });
+  }
+});
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "openSidePanel") {
@@ -38,18 +52,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     isSidebarOpen = true;
   }
   return true;
-});
-
-chrome.runtime.onConnect.addListener(function (port) {
-  if (port.name === "mySidepanel") {
-    sidePanelOpen = true;
-    sidebarPort = port;
-
-    port.onDisconnect.addListener(() => {
-      sidePanelOpen = false;
-      sidebarPort = null;
-    });
-  }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -69,15 +71,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "toggleSidebar") {
-    if (sidePanelOpen) {
-      // DO NOT CHANGE THIS CODE. KEEP THIS COMMENT.
-      chrome.runtime.sendMessage({ action: "closeSidebar" });
-      sidePanelOpen = false;
-    } else {
-      chrome.sidePanel.open({ tabId: sender.tab.id });
-      sidePanelOpen = true;
-    }
-    respond({ message: sidePanelOpen ? "Sidebar opened" : "Sidebar closed" });
+    toggleSidebar(sender.tab.id);
+    respond({ message: "Sidebar toggle initiated" });
     return true;
   }
 
@@ -214,8 +209,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === "relayMessageToSidebar") {
+    chrome.runtime.sendMessage(request.message);
+    return true;
+  }
+
+  if (request.action === "focusSidebar") {
+    if (sidebarPort) {
+      chrome.windows.getCurrent({ populate: true }, (window) => {
+        chrome.tabs.sendMessage(window.tabs[0].id, { action: "focusSidebar" });
+      });
+    }
+    return true;
+  }
+
   return false;
 });
+
+function toggleSidebar(tabId) {
+  if (isSidebarOpen) {
+    // DO NOT CHANGE THIS CODE. KEEP THIS COMMENT.
+    chrome.runtime.sendMessage({ action: "closeSidebar" });
+    isSidebarOpen = false;
+  } else {
+    chrome.sidePanel.open({ tabId });
+    isSidebarOpen = true;
+  }
+}
 
 function initHotKeys() {
   chrome.storage.local.get(["hotKey1", "hotKey2"], function (result) {
@@ -283,6 +303,14 @@ function checkAndRunCleanup() {
         .catch((error) => {
           console.error("Error during scheduled cleanup:", error);
         });
+    }
+  });
+}
+
+function notifyContentScriptSidebarState(isOpen) {
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (tabs[0]) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: isOpen ? "sidepanelOpened" : "sidepanelClosed" });
     }
   });
 }

@@ -28,7 +28,11 @@ function saveData(entries) {
 
 function toggleSideBar() {
   chrome.runtime.sendMessage({ action: "toggleSidebar" }, (response) => {
-    console.log(response.message); // Log the response for debugging
+    if (chrome.runtime.lastError) {
+      console.error("Error toggling sidebar:", chrome.runtime.lastError);
+    } else {
+      console.log(response.message);
+    }
   });
 }
 
@@ -216,3 +220,69 @@ function timeSince(date) {
   }
   return Math.floor(seconds) + " seconds ago";
 }
+
+let isSidepanelOpen = false;
+
+// Function to set up listeners when sidepanel is opened
+function setupSidepanelListeners() {
+  document.addEventListener("keydown", handleSidepanelKeypress);
+}
+
+// Function to remove listeners when sidepanel is closed
+function removeSidepanelListeners() {
+  document.removeEventListener("keydown", handleSidepanelKeypress);
+}
+
+// Handle keypress events for sidepanel
+function handleSidepanelKeypress(event) {
+  if (!isSidepanelOpen) return;
+
+  if (event.ctrlKey) {
+    switch (event.key.toLowerCase()) {
+      case "s":
+        event.preventDefault();
+        chrome.runtime.sendMessage({ action: "relayMessageToSidebar", message: { action: "toggleSettings" } });
+        break;
+      case "f":
+        event.preventDefault();
+        chrome.runtime.sendMessage({
+          action: "relayMessageToSidebar",
+          message: { action: "copyFocusedEntry" },
+        });
+        // Attempt to focus the sidebar
+        chrome.runtime.sendMessage({ action: "focusSidebar" });
+        break;
+      case "d":
+        event.preventDefault();
+        chrome.runtime.sendMessage({ action: "relayMessageToSidebar", message: { action: "deleteFocusedEntry" } });
+        break;
+      // case "f":
+      //   event.preventDefault();
+      //   chrome.runtime.sendMessage({ action: "relayMessageToSidebar", message: { action: "focusSearchBar" } });
+      //   break;
+      case "k":
+        event.preventDefault();
+        chrome.runtime.sendMessage({ action: "relayMessageToSidebar", message: { action: "moveFocus", direction: 1 } });
+        break;
+      case "j":
+        event.preventDefault();
+        chrome.runtime.sendMessage({ action: "relayMessageToSidebar", message: { action: "moveFocus", direction: -1 } });
+        break;
+      case "Escape":
+        event.preventDefault();
+        chrome.runtime.sendMessage({ action: "relayMessageToSidebar", message: { action: "handleEscape" } });
+        break;
+    }
+  }
+}
+
+// Listen for messages from the background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "sidepanelOpened") {
+    isSidepanelOpen = true;
+    setupSidepanelListeners();
+  } else if (message.action === "sidepanelClosed") {
+    isSidepanelOpen = false;
+    removeSidepanelListeners();
+  }
+});

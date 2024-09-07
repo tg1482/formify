@@ -177,6 +177,10 @@ html {
   text-shadow: 1px 1px #001933;
 }
 
+.last-entry {
+  margin-bottom: 50px;
+}
+
 .copy-button {
   color: #00ff00;
   background-color: transparent;
