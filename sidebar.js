@@ -51,6 +51,43 @@ function addCustomSidebar() {
   const sidebar = createSidebarElement();
   document.body.appendChild(sidebar);
   focusFirstElement();
+  setupKeyboardListeners(); // Add this line to set up the keyboard listeners
+}
+
+function setupKeyboardListeners() {
+  document.addEventListener("keydown", function (event) {
+    if (event.ctrlKey) {
+      switch (event.key.toLowerCase()) {
+        case "s":
+          event.preventDefault();
+          toggleSettings();
+          break;
+        case "c":
+          event.preventDefault();
+          copyFocusedEntry(document.querySelectorAll(".data-entry"));
+          break;
+        case "d":
+          event.preventDefault();
+          deleteFocusedEntry(document.querySelectorAll(".data-entry"));
+          break;
+        case "k":
+          event.preventDefault();
+          moveFocus(1, document.querySelectorAll(".data-entry"));
+          break;
+        case "j":
+          event.preventDefault();
+          moveFocus(-1, document.querySelectorAll(".data-entry"));
+          break;
+        case "o":
+          event.preventDefault();
+          window.close();
+          break;
+      }
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      handleEscape();
+    }
+  });
 }
 
 function createSidebarElement() {
@@ -270,8 +307,8 @@ function createNonEditableHotkeySection() {
     { keys: "Ctrl + S", description: "Toggle settings panel" },
     { keys: "Ctrl + C", description: "Copy focused entry" },
     { keys: "Ctrl + D", description: "Delete focused entry" },
-    { keys: "Ctrl + k", description: "Move focus up" },
-    { keys: "Ctrl + j", description: "Move focus down" },
+    { keys: "Ctrl + J", description: "Move focus down" },
+    { keys: "Ctrl + K", description: "Move focus up" },
     { keys: "ESC", description: "Exit settings" },
   ];
 
