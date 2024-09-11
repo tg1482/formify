@@ -14,7 +14,7 @@ Formify is a Chrome extension that assists with form filling by automatically sa
 - Data retention strategy with customizable settings
 - Privacy-focused: all data stored locally
 
-## Installation
+## Installation in Developer Mode
 
 1. Clone this repository or download the source code.
 2. Open Chrome and navigate to `chrome://extensions/`.
@@ -23,7 +23,7 @@ Formify is a Chrome extension that assists with form filling by automatically sa
 
 ## Usage
 
-- Click on the Formify icon in your Chrome toolbar to open the side panel.
+- Press Control + O to toggle the side-panel. Alternatively, Right-Click on the Formify icon in your Chrome toolbar and open side panel
 - Use the side panel to search and manage your saved form data.
 - As you fill out forms on websites, Formify will automatically save your inputs.
 - Use the context menu or keyboard shortcuts to quickly access Formify features.
@@ -42,11 +42,9 @@ Formify is a Chrome extension that assists with form filling by automatically sa
 
 To set up the project for development:
 
-1. Make sure you have Node.js and npm installed.
-2. Run `npm install` to install any dependencies (if applicable).
-3. Make changes to the source files as needed.
-4. Load the extension in Chrome as described in the Installation section.
-5. After making changes, reload the extension in Chrome to see the updates.
+1. Make changes to the source files as needed.
+2. Load the extension in Chrome with Developer Mode activated.
+3. After making changes, reload the extension in Chrome to see the updates.
 
 ## Contributing
 
