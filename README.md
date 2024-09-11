@@ -2,6 +2,8 @@
 
 ![Formify Logo](media/demo.gif)
 
+Chrome Store link - https://chromewebstore.google.com/detail/formify/jkipfkohehajmidgmlhjljbngnjijfjo
+
 Formify is a Chrome extension that assists with form filling by automatically saving and retrieving form inputs locally.
 
 ## Features
